@@ -1,960 +1,1108 @@
 <!DOCTYPE html>
 <html lang="nl">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RetroStudio — Kleine games. Geen bullshit.</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&display=swap');
-
-  :root {
-    --bg: #0a0a0f;
-    --bg2: #0f0f1a;
-    --surface: #13131f;
-    --border: #2a2a3f;
-    --accent: #e8ff00;
-    --accent2: #00ffcc;
-    --accent3: #ff5577;
-    --text: #d0d0e8;
-    --muted: #6060a0;
-    --pixel: 4px;
-  }
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  html { scroll-behavior: smooth; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 15px;
-    line-height: 1.7;
-    overflow-x: hidden;
-  }
-
-  /* Scanline overlay */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: repeating-linear-gradient(
-      to bottom,
-      transparent 0px,
-      transparent 3px,
-      rgba(0,0,0,0.08) 3px,
-      rgba(0,0,0,0.08) 4px
-    );
-    pointer-events: none;
-    z-index: 1000;
-  }
-
-  /* Pixel noise texture on bg */
-  body::after {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-    pointer-events: none;
-    z-index: 999;
-    opacity: 0.4;
-  }
-
-  /* ── NAV ── */
-  nav {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 40px;
-    background: rgba(10,10,15,0.88);
-    border-bottom: 1px solid var(--border);
-    backdrop-filter: blur(8px);
-  }
-
-  .nav-logo {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 11px;
-    color: var(--accent);
-    text-shadow: 0 0 12px rgba(232,255,0,0.5);
-    letter-spacing: 0.05em;
-    text-decoration: none;
-  }
-
-  .nav-links {
-    display: flex;
-    gap: 32px;
-    list-style: none;
-  }
-
-  .nav-links a {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px;
-    color: var(--muted);
-    text-decoration: none;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    transition: color 0.2s;
-  }
-
-  .nav-links a:hover { color: var(--accent); }
-
-  .nav-cta {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 9px;
-    color: var(--bg);
-    background: var(--accent);
-    padding: 10px 16px;
-    text-decoration: none;
-    image-rendering: pixelated;
-    clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
-    transition: background 0.15s, box-shadow 0.15s;
-  }
-
-  .nav-cta:hover {
-    background: var(--accent2);
-    box-shadow: 0 0 16px rgba(0,255,204,0.4);
-  }
-
-  /* ── HERO ── */
-  #hero {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 120px 24px 80px;
-    position: relative;
-  }
-
-  .hero-grid-bg {
-    position: absolute;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(232,255,0,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(232,255,0,0.04) 1px, transparent 1px);
-    background-size: 40px 40px;
-    mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black 30%, transparent 100%);
-  }
-
-  .hero-eyebrow {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px;
-    color: var(--accent2);
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-    margin-bottom: 24px;
-    opacity: 0;
-    animation: fadeUp 0.6s ease 0.2s forwards;
-  }
-
-  .hero-eyebrow::before { content: '> '; color: var(--muted); }
-
-  h1 {
-    font-family: 'Press Start 2P', monospace;
-    font-size: clamp(20px, 4vw, 42px);
-    line-height: 1.6;
-    color: #fff;
-    max-width: 800px;
-    margin-bottom: 8px;
-    opacity: 0;
-    animation: fadeUp 0.6s ease 0.4s forwards;
-  }
-
-  h1 span.accent { color: var(--accent); text-shadow: 0 0 20px rgba(232,255,0,0.6); }
-  h1 span.accent2 { color: var(--accent2); }
-
-  .hero-sub {
-    font-family: 'VT323', monospace;
-    font-size: 22px;
-    color: var(--muted);
-    max-width: 520px;
-    margin: 24px auto 48px;
-    opacity: 0;
-    animation: fadeUp 0.6s ease 0.6s forwards;
-  }
-
-  .hero-buttons {
-    display: flex;
-    gap: 16px;
-    justify-content: center;
-    flex-wrap: wrap;
-    opacity: 0;
-    animation: fadeUp 0.6s ease 0.8s forwards;
-  }
-
-  .btn-primary {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 10px;
-    color: var(--bg);
-    background: var(--accent);
-    padding: 16px 24px;
-    text-decoration: none;
-    display: inline-block;
-    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
-    transition: all 0.15s;
-    line-height: 1.4;
-  }
-
-  .btn-primary:hover {
-    background: #fff;
-    box-shadow: 0 0 32px rgba(232,255,0,0.5);
-    transform: translateY(-2px);
-  }
-
-  .btn-secondary {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 10px;
-    color: var(--accent2);
-    background: transparent;
-    border: 1px solid var(--accent2);
-    padding: 16px 24px;
-    text-decoration: none;
-    display: inline-block;
-    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
-    transition: all 0.15s;
-    line-height: 1.4;
-  }
-
-  .btn-secondary:hover {
-    background: rgba(0,255,204,0.08);
-    box-shadow: 0 0 20px rgba(0,255,204,0.2);
-    transform: translateY(-2px);
-  }
-
-  .hero-stats {
-    display: flex;
-    gap: 48px;
-    justify-content: center;
-    margin-top: 64px;
-    flex-wrap: wrap;
-    opacity: 0;
-    animation: fadeUp 0.6s ease 1s forwards;
-  }
-
-  .stat {
-    text-align: center;
-  }
-
-  .stat-number {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 18px;
-    color: var(--accent);
-    display: block;
-    margin-bottom: 8px;
-  }
-
-  .stat-label {
-    font-size: 11px;
-    color: var(--muted);
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-  }
-
-  /* ── MANIFESTO ── */
-  #manifesto {
-    padding: 100px 24px;
-    max-width: 720px;
-    margin: 0 auto;
-  }
-
-  .section-label {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px;
-    color: var(--accent3);
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-    margin-bottom: 32px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .section-label::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-  }
-
-  .manifesto-block {
-    border-left: 3px solid var(--accent);
-    padding: 24px 32px;
-    background: var(--surface);
-    margin-bottom: 24px;
-    position: relative;
-  }
-
-  .manifesto-block::before {
-    content: attr(data-n);
-    font-family: 'Press Start 2P', monospace;
-    font-size: 9px;
-    color: var(--accent);
-    position: absolute;
-    top: -12px;
-    left: 16px;
-    background: var(--surface);
-    padding: 2px 8px;
-    border: 1px solid var(--accent);
-  }
-
-  .manifesto-block p {
-    font-family: 'VT323', monospace;
-    font-size: 21px;
-    color: var(--text);
-    line-height: 1.5;
-  }
-
-  .manifesto-block strong { color: var(--accent); font-style: normal; }
-
-  /* ── GAMES SECTION ── */
-  #games {
-    padding: 100px 24px;
-    max-width: 1100px;
-    margin: 0 auto;
-  }
-
-  .section-title {
-    font-family: 'Press Start 2P', monospace;
-    font-size: clamp(14px, 2vw, 22px);
-    color: #fff;
-    margin-bottom: 48px;
-    line-height: 1.6;
-  }
-
-  .games-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 2px;
-    background: var(--border);
-    border: 1px solid var(--border);
-  }
-
-  .game-card {
-    background: var(--surface);
-    padding: 0;
-    overflow: hidden;
-    cursor: pointer;
-    transition: transform 0.15s;
-    position: relative;
-  }
-
-  .game-card:hover { transform: scale(1.01); z-index: 2; }
-
-  .game-pixel-art {
-    width: 100%;
-    aspect-ratio: 16/9;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 48px;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .game-pixel-art canvas {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    image-rendering: pixelated;
-  }
-
-  .game-info {
-    padding: 20px;
-    border-top: 1px solid var(--border);
-  }
-
-  .game-title {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 11px;
-    color: #fff;
-    margin-bottom: 8px;
-  }
-
-  .game-desc {
-    font-size: 13px;
-    color: var(--muted);
-    margin-bottom: 16px;
-    font-family: 'IBM Plex Mono', monospace;
-  }
-
-  .game-meta {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .game-price {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 12px;
-    color: var(--accent);
-  }
-
-  .game-platform {
-    font-size: 11px;
-    color: var(--muted);
-    font-family: 'IBM Plex Mono', monospace;
-    letter-spacing: 0.1em;
-  }
-
-  .game-badge {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    font-family: 'Press Start 2P', monospace;
-    font-size: 7px;
-    padding: 4px 8px;
-    background: var(--accent3);
-    color: #fff;
-  }
-
-  /* ── PHILOSOPHY ── */
-  #philosophy {
-    padding: 100px 24px;
-    background: var(--bg2);
-    border-top: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-  }
-
-  .philosophy-inner {
-    max-width: 1000px;
-    margin: 0 auto;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 64px;
-    align-items: start;
-  }
-
-  @media (max-width: 700px) {
-    .philosophy-inner { grid-template-columns: 1fr; gap: 40px; }
-    nav { padding: 16px 20px; }
-    .nav-links { display: none; }
-    .hero-stats { gap: 28px; }
-  }
-
-  .philosophy-left h2 {
-    font-family: 'Press Start 2P', monospace;
-    font-size: clamp(13px, 1.8vw, 20px);
-    color: #fff;
-    line-height: 1.8;
-    margin-bottom: 24px;
-  }
-
-  .philosophy-left p {
-    color: var(--muted);
-    font-size: 14px;
-    margin-bottom: 16px;
-    font-family: 'IBM Plex Mono', monospace;
-  }
-
-  .spec-list {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .spec-list li {
-    display: flex;
-    gap: 16px;
-    padding: 16px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 13px;
-    color: var(--text);
-    align-items: flex-start;
-    transition: border-color 0.2s;
-  }
-
-  .spec-list li:hover { border-color: var(--accent2); }
-
-  .spec-icon {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 10px;
-    color: var(--accent2);
-    min-width: 24px;
-    margin-top: 2px;
-  }
-
-  /* ── PATREON ── */
-  #support {
-    padding: 100px 24px;
-    max-width: 900px;
-    margin: 0 auto;
-    text-align: center;
-  }
-
-  #support h2 {
-    font-family: 'Press Start 2P', monospace;
-    font-size: clamp(14px, 2vw, 20px);
-    color: #fff;
-    line-height: 1.8;
-    margin-bottom: 16px;
-  }
-
-  #support p {
-    color: var(--muted);
-    margin-bottom: 48px;
-    font-family: 'VT323', monospace;
-    font-size: 20px;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .tiers {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 2px;
-    background: var(--border);
-    border: 1px solid var(--border);
-    margin-bottom: 32px;
-    text-align: left;
-  }
-
-  .tier {
-    background: var(--surface);
-    padding: 28px;
-    position: relative;
-  }
-
-  .tier.featured {
-    background: #13201a;
-    border-top: 3px solid var(--accent2);
-  }
-
-  .tier-label {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 8px;
-    color: var(--muted);
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    margin-bottom: 12px;
-  }
-
-  .tier-price {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 18px;
-    color: var(--accent);
-    margin-bottom: 20px;
-  }
-
-  .tier-price span {
-    font-size: 10px;
-    color: var(--muted);
-  }
-
-  .tier-features {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .tier-features li {
-    font-size: 12px;
-    color: var(--text);
-    padding-left: 16px;
-    position: relative;
-    font-family: 'IBM Plex Mono', monospace;
-  }
-
-  .tier-features li::before {
-    content: '▸';
-    position: absolute;
-    left: 0;
-    color: var(--accent2);
-    font-size: 10px;
-  }
-
-  /* ── FOOTER ── */
-  footer {
-    border-top: 1px solid var(--border);
-    padding: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: gap;
-    gap: 16px;
-  }
-
-  .footer-logo {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 10px;
-    color: var(--accent);
-  }
-
-  .footer-copy {
-    font-size: 11px;
-    color: var(--muted);
-    font-family: 'IBM Plex Mono', monospace;
-  }
-
-  .footer-links {
-    display: flex;
-    gap: 24px;
-    list-style: none;
-  }
-
-  .footer-links a {
-    font-size: 11px;
-    color: var(--muted);
-    text-decoration: none;
-    font-family: 'IBM Plex Mono', monospace;
-    transition: color 0.2s;
-  }
-
-  .footer-links a:hover { color: var(--accent); }
-
-  /* ── ANIMATIONS ── */
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes blink {
-    0%, 49% { opacity: 1; }
-    50%, 100% { opacity: 0; }
-  }
-
-  .cursor::after {
-    content: '█';
-    animation: blink 1s step-end infinite;
-    color: var(--accent);
-    font-size: 0.8em;
-  }
-
-  /* scroll reveal */
-  .reveal {
-    opacity: 0;
-    transform: translateY(24px);
-    transition: opacity 0.6s ease, transform 0.6s ease;
-  }
-  .reveal.visible {
-    opacity: 1;
-    transform: none;
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RetroStudio — Kleine games. Geen bullshit.</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&display=swap');
+
+    :root {
+      --bg: #0a0a0f;
+      --bg2: #0f0f1a;
+      --surface: #13131f;
+      --border: #2a2a3f;
+      --accent: #e8ff00;
+      --accent2: #00ffcc;
+      --accent3: #ff5577;
+      --text: #d0d0e8;
+      --muted: #6060a0;
+      --pixel: 4px;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 15px;
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* Scanline overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(to bottom,
+          transparent 0px,
+          transparent 3px,
+          rgba(0, 0, 0, 0.08) 3px,
+          rgba(0, 0, 0, 0.08) 4px);
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    /* Pixel noise texture on bg */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 999;
+      opacity: 0.4;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 40px;
+      background: rgba(10, 10, 15, 0.88);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(8px);
+    }
+
+    .nav-logo {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 11px;
+      color: var(--accent);
+      text-shadow: 0 0 12px rgba(232, 255, 0, 0.5);
+      letter-spacing: 0.05em;
+      text-decoration: none;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      text-decoration: none;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--accent);
+    }
+
+    .nav-cta {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      color: var(--bg);
+      background: var(--accent);
+      padding: 10px 16px;
+      text-decoration: none;
+      image-rendering: pixelated;
+      clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+      transition: background 0.15s, box-shadow 0.15s;
+    }
+
+    .nav-cta:hover {
+      background: var(--accent2);
+      box-shadow: 0 0 16px rgba(0, 255, 204, 0.4);
+    }
+
+    /* ── HERO ── */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      position: relative;
+    }
+
+    .hero-grid-bg {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(232, 255, 0, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(232, 255, 0, 0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black 30%, transparent 100%);
+    }
+
+    .hero-eyebrow {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--accent2);
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      opacity: 0;
+      animation: fadeUp 0.6s ease 0.2s forwards;
+    }
+
+    .hero-eyebrow::before {
+      content: '> ';
+      color: var(--muted);
+    }
+
+    h1 {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(20px, 4vw, 42px);
+      line-height: 1.6;
+      color: #fff;
+      max-width: 800px;
+      margin-bottom: 8px;
+      opacity: 0;
+      animation: fadeUp 0.6s ease 0.4s forwards;
+    }
+
+    h1 span.accent {
+      color: var(--accent);
+      text-shadow: 0 0 20px rgba(232, 255, 0, 0.6);
+    }
+
+    h1 span.accent2 {
+      color: var(--accent2);
+    }
+
+    .hero-sub {
+      font-family: 'VT323', monospace;
+      font-size: 22px;
+      color: var(--muted);
+      max-width: 520px;
+      margin: 24px auto 48px;
+      opacity: 0;
+      animation: fadeUp 0.6s ease 0.6s forwards;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      opacity: 0;
+      animation: fadeUp 0.6s ease 0.8s forwards;
+    }
+
+    .btn-primary {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      color: var(--bg);
+      background: var(--accent);
+      padding: 16px 24px;
+      text-decoration: none;
+      display: inline-block;
+      clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+      transition: all 0.15s;
+      line-height: 1.4;
+    }
+
+    .btn-primary:hover {
+      background: #fff;
+      box-shadow: 0 0 32px rgba(232, 255, 0, 0.5);
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      color: var(--accent2);
+      background: transparent;
+      border: 1px solid var(--accent2);
+      padding: 16px 24px;
+      text-decoration: none;
+      display: inline-block;
+      clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+      transition: all 0.15s;
+      line-height: 1.4;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(0, 255, 204, 0.08);
+      box-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .hero-stats {
+      display: flex;
+      gap: 48px;
+      justify-content: center;
+      margin-top: 64px;
+      flex-wrap: wrap;
+      opacity: 0;
+      animation: fadeUp 0.6s ease 1s forwards;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-number {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 18px;
+      color: var(--accent);
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    /* ── MANIFESTO ── */
+    #manifesto {
+      padding: 100px 24px;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--accent3);
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .manifesto-block {
+      border-left: 3px solid var(--accent);
+      padding: 24px 32px;
+      background: var(--surface);
+      margin-bottom: 24px;
+      position: relative;
+    }
+
+    .manifesto-block::before {
+      content: attr(data-n);
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      color: var(--accent);
+      position: absolute;
+      top: -12px;
+      left: 16px;
+      background: var(--surface);
+      padding: 2px 8px;
+      border: 1px solid var(--accent);
+    }
+
+    .manifesto-block p {
+      font-family: 'VT323', monospace;
+      font-size: 21px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .manifesto-block strong {
+      color: var(--accent);
+      font-style: normal;
+    }
+
+    /* ── GAMES SECTION ── */
+    #games {
+      padding: 100px 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(14px, 2vw, 22px);
+      color: #fff;
+      margin-bottom: 48px;
+      line-height: 1.6;
+    }
+
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 2px;
+      background: var(--border);
+      border: 1px solid var(--border);
+    }
+
+    .game-card {
+      background: var(--surface);
+      padding: 0;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.15s;
+      position: relative;
+    }
+
+    .game-card:hover {
+      transform: scale(1.01);
+      z-index: 2;
+    }
+
+    .game-pixel-art {
+      width: 100%;
+      aspect-ratio: 16/9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .game-pixel-art canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+    }
+
+    .game-info {
+      padding: 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .game-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 11px;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    .game-desc {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 16px;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .game-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .game-price {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 12px;
+      color: var(--accent);
+    }
+
+    .game-platform {
+      font-size: 11px;
+      color: var(--muted);
+      font-family: 'IBM Plex Mono', monospace;
+      letter-spacing: 0.1em;
+    }
+
+    .game-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      padding: 4px 8px;
+      background: var(--accent3);
+      color: #fff;
+    }
+
+    /* ── PHILOSOPHY ── */
+    #philosophy {
+      padding: 100px 24px;
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .philosophy-inner {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+      align-items: start;
+    }
+
+    @media (max-width: 700px) {
+      .philosophy-inner {
+        grid-template-columns: 1fr;
+        gap: 40px;
+      }
+
+      nav {
+        padding: 16px 20px;
+      }
+
+      .nav-links {
+        display: none;
+      }
+
+      .hero-stats {
+        gap: 28px;
+      }
+    }
+
+    .philosophy-left h2 {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(13px, 1.8vw, 20px);
+      color: #fff;
+      line-height: 1.8;
+      margin-bottom: 24px;
+    }
+
+    .philosophy-left p {
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 16px;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .spec-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .spec-list li {
+      display: flex;
+      gap: 16px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      color: var(--text);
+      align-items: flex-start;
+      transition: border-color 0.2s;
+    }
+
+    .spec-list li:hover {
+      border-color: var(--accent2);
+    }
+
+    .spec-icon {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      color: var(--accent2);
+      min-width: 24px;
+      margin-top: 2px;
+    }
+
+    /* ── PATREON ── */
+    #support {
+      padding: 100px 24px;
+      max-width: 900px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    #support h2 {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(14px, 2vw, 20px);
+      color: #fff;
+      line-height: 1.8;
+      margin-bottom: 16px;
+    }
+
+    #support p {
+      color: var(--muted);
+      margin-bottom: 48px;
+      font-family: 'VT323', monospace;
+      font-size: 20px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .tiers {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 2px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      margin-bottom: 32px;
+      text-align: left;
+    }
+
+    .tier {
+      background: var(--surface);
+      padding: 28px;
+      position: relative;
+    }
+
+    .tier.featured {
+      background: #13201a;
+      border-top: 3px solid var(--accent2);
+    }
+
+    .tier-label {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      color: var(--muted);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .tier-price {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 18px;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+
+    .tier-price span {
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .tier-features {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .tier-features li {
+      font-size: 12px;
+      color: var(--text);
+      padding-left: 16px;
+      position: relative;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .tier-features li::before {
+      content: '▸';
+      position: absolute;
+      left: 0;
+      color: var(--accent2);
+      font-size: 10px;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: gap;
+      gap: 16px;
+    }
+
+    .footer-logo {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      color: var(--accent);
+    }
+
+    .footer-copy {
+      font-size: 11px;
+      color: var(--muted);
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      list-style: none;
+    }
+
+    .footer-links a {
+      font-size: 11px;
+      color: var(--muted);
+      text-decoration: none;
+      font-family: 'IBM Plex Mono', monospace;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover {
+      color: var(--accent);
+    }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes blink {
+
+      0%,
+      49% {
+        opacity: 1;
+      }
+
+      50%,
+      100% {
+        opacity: 0;
+      }
+    }
+
+    .cursor::after {
+      content: '█';
+      animation: blink 1s step-end infinite;
+      color: var(--accent);
+      font-size: 0.8em;
+    }
+
+    /* scroll reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: none;
+    }
+
+    /* Contact form styling */
+    .contact-form {
+      max-width: 640px;
+      margin: 24px auto 12px;
+      display: block;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+    }
+
+    .contact-form .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .contact-form label {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .contact-form input,
+    .contact-form textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--text);
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 14px;
+      resize: vertical;
+    }
+
+    .contact-form input:focus,
+    .contact-form textarea:focus {
+      outline: none;
+      border-color: var(--accent2);
+      box-shadow: 0 0 10px rgba(0, 255, 204, 0.08);
+    }
+
+    .contact-form .form-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+      justify-content: center;
+      margin-top: 10px;
+    }
+
+    .contact-form .note {
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+      width: 100%;
+    }
+  </style>
 </head>
+
 <body>
 
-<!-- NAV -->
-<nav>
-  <a href="#" class="nav-logo">RETROSTUDIO</a>
-  <ul class="nav-links">
-    <li><a href="#games">Games</a></li>
-    <li><a href="#philosophy">Filosofie</a></li>
-    <li><a href="#support">Patreon</a></li>
-  </ul>
-  <a href="https://retrostudio.itch.io" class="nav-cta">itch.io ↗</a>
-</nav>
+  <!-- NAV -->
+  <nav>
+    <a href="#" class="nav-logo">RETROSTUDIO</a>
+    <ul class="nav-links">
+      <li><a href="#games">Games</a></li>
+      <li><a href="#philosophy">Filosofie</a></li>
+      <li><a href="https://patreon.com" class="btn-primary">Patreon</a></li>
+    </ul>
+    <a href="https://retrostudio.itch.io" class="nav-cta">itch.io ↗</a>
+  </nav>
 
-<!-- HERO -->
-<section id="hero">
-  <div class="hero-grid-bg"></div>
-  <p class="hero-eyebrow">Brussel — 2026</p>
-  <h1>
-    Kleine games.<br>
-    <span class="accent">Geen bullshit.</span>
-  </h1>
-  <p class="hero-sub">
-    Werkt op een laptop uit 2008. Download, dubbelklik, speel.<br>
-    Geen launcher. Geen DRM. Geen tracking.
-  </p>
-  <div class="hero-buttons">
-    <a href="#games" class="btn-primary">Bekijk de games</a>
-    <a href="#support" class="btn-secondary">Support via Patreon</a>
-  </div>
-  <div class="hero-stats">
-    <div class="stat">
-      <span class="stat-number">3</span>
-      <span class="stat-label">Games uitgebracht</span>
+  <!-- HERO -->
+  <section id="hero">
+    <div class="hero-grid-bg"></div>
+    <p class="hero-eyebrow">Brussel — 2026</p>
+    <h1>
+      Kleine games.<br>
+      <span class="accent">Geen bullshit.</span>
+    </h1>
+    <p class="hero-sub">
+      Werkt op een laptop uit 2008. Download, dubbelklik, speel.<br>
+      Geen launcher. Geen DRM. Geen tracking.
+    </p>
+    <div class="hero-buttons">
+      <a href="#games" class="btn-primary">Bekijk de games</a>
     </div>
-    <div class="stat">
-      <span class="stat-number">&lt;100MB</span>
-      <span class="stat-label">Per game</span>
-    </div>
-    <div class="stat">
-      <span class="stat-number">€4.99</span>
-      <span class="stat-label">Eerlijke prijs</span>
-    </div>
-    <div class="stat">
-      <span class="stat-number">0</span>
-      <span class="stat-label">Microtransacties</span>
-    </div>
-  </div>
-</section>
-
-<!-- MANIFESTO -->
-<section id="manifesto">
-  <p class="section-label">Manifest</p>
-  <div class="manifesto-block reveal" data-n="01">
-    <p>Games zijn te groot geworden. <strong>RetroStudio</strong> maakt games die je op vijf minuten kan installeren, spelen, en begrijpen.</p>
-  </div>
-  <div class="manifesto-block reveal" data-n="02">
-    <p>Elke game werkt op <strong>hardware uit 2008</strong>. Als het niet draait op een oude laptop, is het ons probleem — niet het jouwe.</p>
-  </div>
-  <div class="manifesto-block reveal" data-n="03">
-    <p>Geen analytics. Geen launcher. Geen <strong>optionele DLC</strong> die eigenlijk verplicht aanvoelt. Je betaalt één keer en krijgt het hele spel.</p>
-  </div>
-  <div class="manifesto-block reveal" data-n="04">
-    <p>Open roadmap. Publieke issue-tracker. <strong>Transparantie</strong> als product, niet als marketingstrategie.</p>
-  </div>
-</section>
-
-<!-- GAMES -->
-<section id="games">
-  <p class="section-label">Games</p>
-  <h2 class="section-title">Alles wat we gemaakt hebben<span class="cursor"></span></h2>
-  <div class="games-grid">
-
-    <div class="game-card reveal">
-      <div class="game-pixel-art" style="background:#0d1117;">
-        <canvas id="c1" width="64" height="36"></canvas>
+    <div class="hero-stats">
+      <div class="stat">
+        <span class="stat-number">3</span>
+        <span class="stat-label">Games uitgebracht</span>
       </div>
-      <div class="game-badge">NIEUW</div>
-      <div class="game-info">
-        <p class="game-title">DUNGEON #1</p>
-        <p class="game-desc">Turn-based roguelike. Eén dungeon, duizend runs. Klassieke mechanica, geen tutorial nodig.</p>
-        <div class="game-meta">
-          <span class="game-price">€4.99</span>
-          <span class="game-platform">WIN / MAC / LINUX</span>
+      <div class="stat">
+        <span class="stat-number">&lt;100MB</span>
+        <span class="stat-label">Per game</span>
+      </div>
+      <div class="stat">
+        <span class="stat-number">€4.99</span>
+        <span class="stat-label">Eerlijke prijs</span>
+      </div>
+      <div class="stat">
+        <span class="stat-number">0</span>
+        <span class="stat-label">Microtransacties</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- MANIFESTO -->
+  <section id="manifesto">
+    <p class="section-label">Manifest</p>
+    <div class="manifesto-block reveal" data-n="01">
+      <p>Games zijn te groot geworden. <strong>RetroStudio</strong> maakt games die je op vijf minuten kan installeren,
+        spelen, en begrijpen.</p>
+    </div>
+    <div class="manifesto-block reveal" data-n="02">
+      <p>Elke game werkt op <strong>hardware uit 2008</strong>. Als het niet draait op een oude laptop, is het ons
+        probleem — niet het jouwe.</p>
+    </div>
+    <div class="manifesto-block reveal" data-n="03">
+      <p>Geen analytics. Geen launcher. Geen <strong>optionele DLC</strong> die eigenlijk verplicht aanvoelt. Je betaalt
+        één keer en krijgt het hele spel.</p>
+    </div>
+    <div class="manifesto-block reveal" data-n="04">
+      <p>Open roadmap. Publieke issue-tracker. <strong>Transparantie</strong> als product, niet als marketingstrategie.
+      </p>
+    </div>
+  </section>
+
+  <!-- GAMES -->
+  <section id="games">
+    <p class="section-label">Games</p>
+    <h2 class="section-title">Alles wat we gemaakt hebben<span class="cursor"></span></h2>
+    <div class="games-grid">
+
+      <a href="https://git.nsrddyn.com" target="_blank" rel="noopener" class="game-card reveal">
+        <div class="game-pixel-art" style="background:#0d1117;">
+          <canvas id="c1" width="64" height="36"></canvas>
         </div>
-      </div>
-    </div>
-
-    <div class="game-card reveal">
-      <div class="game-pixel-art" style="background:#080d12;">
-        <canvas id="c2" width="64" height="36"></canvas>
-      </div>
-      <div class="game-info">
-        <p class="game-title">VOID RUNNER</p>
-        <p class="game-desc">Endless side-scroller in een pixelruimte. Handmade engine. Nul afhankelijkheden.</p>
-        <div class="game-meta">
-          <span class="game-price">€4.99</span>
-          <span class="game-platform">WIN / LINUX</span>
+        <div class="game-badge">NIEUW</div>
+        <div class="game-info">
+          <p class="game-title">DUNGEON #1</p>
+          <p class="game-desc">Turn-based roguelike. Eén dungeon, duizend runs. Klassieke mechanica, geen tutorial
+            nodig.</p>
+          <div class="game-meta">
+            <span class="game-price">€4.99</span>
+            <span class="game-platform">WIN / MAC / LINUX</span>
+          </div>
         </div>
-      </div>
-    </div>
+      </a>
 
-    <div class="game-card reveal">
-      <div class="game-pixel-art" style="background:#0a1208;">
-        <canvas id="c3" width="64" height="36"></canvas>
-      </div>
-      <div class="game-info">
-        <p class="game-title">GRID PUZZLE 01</p>
-        <p class="game-desc">Sokoban-variant met een twist. 40 handgemaakte levels. Werkt in de browser.</p>
-        <div class="game-meta">
-          <span class="game-price">€4.99</span>
-          <span class="game-platform">WIN / WEB</span>
+      <a href="https://git.nsrddyn.com" target="_blank" rel="noopener" class="game-card reveal">
+        <div class="game-pixel-art" style="background:#080d12;">
+          <canvas id="c2" width="64" height="36"></canvas>
         </div>
+        <div class="game-info">
+          <p class="game-title">VOID RUNNER</p>
+          <p class="game-desc">Endless side-scroller in een pixelruimte. Handmade engine. Nul afhankelijkheden.</p>
+          <div class="game-meta">
+            <span class="game-price">€4.99</span>
+            <span class="game-platform">WIN / LINUX</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="https://git.nsrddyn.com" target="_blank" rel="noopener" class="game-card reveal">
+        <div class="game-pixel-art" style="background:#0a1208;">
+          <canvas id="c3" width="64" height="36"></canvas>
+        </div>
+        <div class="game-info">
+          <p class="game-title">GRID PUZZLE 01</p>
+          <p class="game-desc">Sokoban-variant met een twist. 40 handgemaakte levels. Werkt in de browser.</p>
+          <div class="game-meta">
+            <span class="game-price">€4.99</span>
+            <span class="game-platform">WIN / WEB</span>
+          </div>
+        </div>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- PHILOSOPHY -->
+  <section id="philosophy">
+    <div class="philosophy-inner">
+      <div class="philosophy-left reveal">
+        <h2>Gebouwd van<br>nul. Echt.</h2>
+        <p>Geen Unity. Geen Unreal. Elke game is geschreven in C, met een handmade engine die precies doet wat nodig is
+          en niks meer.</p>
+        <p>Dit is geen nostalgie. Het is een keuze: als je begrijpt wat er écht gebeurt, maak je betere software.</p>
+        <p style="font-style:italic; color:#4a4a7a;">"Most software does too much."</p>
+      </div>
+      <div class="philosophy-right reveal">
+        <ul class="spec-list">
+          <li>
+            <span class="spec-icon">▸</span>
+            <div>
+              <strong style="color:#fff; display:block; margin-bottom:4px; font-size:12px;">Handmade engine</strong>
+              Geschreven in C. Geen game framework. Directe controle over elk pixel.
+            </div>
+          </li>
+          <li>
+            <span class="spec-icon">▸</span>
+            <div>
+              <strong style="color:#fff; display:block; margin-bottom:4px; font-size:12px;">Minimale footprint</strong>
+              Elke game onder 100MB. Werkt op hardware van een decennium oud.
+            </div>
+          </li>
+          <li>
+            <span class="spec-icon">▸</span>
+            <div>
+              <strong style="color:#fff; display:block; margin-bottom:4px; font-size:12px;">Geen DRM</strong>
+              Je koopt het. Je hebt het. Geen online check, geen key revoke.
+            </div>
+          </li>
+          <li>
+            <span class="spec-icon">▸</span>
+            <div>
+              <strong style="color:#fff; display:block; margin-bottom:4px; font-size:12px;">Open roadmap</strong>
+              Publieke issue-tracker. Iedereen ziet wat er wordt gebouwd en wanneer.
+            </div>
+          </li>
+          <li>
+            <span class="spec-icon">▸</span>
+            <div>
+              <strong style="color:#fff; display:block; margin-bottom:4px; font-size:12px;">Solo developer</strong>
+              Één persoon. Geen publisher. Geen investor. Rechte lijn van idee naar spel.
+            </div>
+          </li>
+        </ul>
       </div>
     </div>
+  </section>
 
-  </div>
-</section>
-
-<!-- PHILOSOPHY -->
-<section id="philosophy">
-  <div class="philosophy-inner">
-    <div class="philosophy-left reveal">
-      <h2>Gebouwd van<br>nul. Echt.</h2>
-      <p>Geen Unity. Geen Unreal. Elke game is geschreven in C, met een handmade engine die precies doet wat nodig is en niks meer.</p>
-      <p>Dit is geen nostalgie. Het is een keuze: als je begrijpt wat er écht gebeurt, maak je betere software.</p>
-      <p style="font-style:italic; color:#4a4a7a;">"Most software does too much." — Casey Muratori</p>
+  <!-- SUPPORT -->
+  <section id="support">
+    <p class="section-label" style="justify-content:center;">Support</p>
+    <h2>Geloof je in wat<br>we bouwen?</h2>
+    <p>Vroege toegang, dev-assets, en directe lijn naar de roadmap. Geen bullshit.</p>
+    <div class="tiers reveal">
+      <div class="tier">
+        <p class="tier-label">Basis</p>
+        <p class="tier-price">€3 <span>/ maand</span></p>
+        <ul class="tier-features">
+          <li>Vroege toegang tot alle releases</li>
+          <li>Maandelijkse devlog nieuwsbrief</li>
+          <li>Naam in credits</li>
+        </ul>
+      </div>
+      <div class="tier featured">
+        <p class="tier-label">Creator ★</p>
+        <p class="tier-price">€8 <span>/ maand</span></p>
+        <ul class="tier-features">
+          <li>Alles van Basis</li>
+          <li>Volledige dev-asset pack</li>
+          <li>Publieke issue-tracker toegang</li>
+          <li>Discord developer kanaal</li>
+          <li>Vroege betas + builds</li>
+        </ul>
+      </div>
     </div>
-    <div class="philosophy-right reveal">
-      <ul class="spec-list">
-        <li>
-          <span class="spec-icon">▸</span>
-          <div>
-            <strong style="color:#fff; display:block; margin-bottom:4px; font-size:12px;">Handmade engine</strong>
-            Geschreven in C. Geen game framework. Directe controle over elk pixel.
-          </div>
-        </li>
-        <li>
-          <span class="spec-icon">▸</span>
-          <div>
-            <strong style="color:#fff; display:block; margin-bottom:4px; font-size:12px;">Minimale footprint</strong>
-            Elke game onder 100MB. Werkt op hardware van een decennium oud.
-          </div>
-        </li>
-        <li>
-          <span class="spec-icon">▸</span>
-          <div>
-            <strong style="color:#fff; display:block; margin-bottom:4px; font-size:12px;">Geen DRM</strong>
-            Je koopt het. Je hebt het. Geen online check, geen key revoke.
-          </div>
-        </li>
-        <li>
-          <span class="spec-icon">▸</span>
-          <div>
-            <strong style="color:#fff; display:block; margin-bottom:4px; font-size:12px;">Open roadmap</strong>
-            Publieke issue-tracker. Iedereen ziet wat er wordt gebouwd en wanneer.
-          </div>
-        </li>
-        <li>
-          <span class="spec-icon">▸</span>
-          <div>
-            <strong style="color:#fff; display:block; margin-bottom:4px; font-size:12px;">Solo developer</strong>
-            Één persoon. Geen publisher. Geen investor. Rechte lijn van idee naar spel.
-          </div>
-        </li>
-      </ul>
-    </div>
-  </div>
-</section>
+    <!-- Contactformulier (stuurt naar e-mail adres op nsrddyn.com via mailto) -->
+    <form action="mailto:contact@nsrddyn.com" method="post" enctype="text/plain" class="contact-form reveal">
+      <div class="form-row">
+        <label>
+          Naam
+          <input type="text" name="Naam" required>
+        </label>
+        <label>
+          Email
+          <input type="email" name="Email" required>
+        </label>
+      </div>
+      <label>
+        Bericht
+        <textarea name="Bericht" rows="5" required></textarea>
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn-primary">Verstuur bericht</button>
+      </div>
+    </form>
 
-<!-- SUPPORT -->
-<section id="support">
-  <p class="section-label" style="justify-content:center;">Support</p>
-  <h2>Geloof je in wat<br>we bouwen?</h2>
-  <p>Vroege toegang, dev-assets, en directe lijn naar de roadmap. Geen bullshit.</p>
-  <div class="tiers reveal">
-    <div class="tier">
-      <p class="tier-label">Basis</p>
-      <p class="tier-price">€3 <span>/ maand</span></p>
-      <ul class="tier-features">
-        <li>Vroege toegang tot alle releases</li>
-        <li>Maandelijkse devlog nieuwsbrief</li>
-        <li>Naam in credits</li>
-      </ul>
-    </div>
-    <div class="tier featured">
-      <p class="tier-label">Creator ★</p>
-      <p class="tier-price">€8 <span>/ maand</span></p>
-      <ul class="tier-features">
-        <li>Alles van Basis</li>
-        <li>Volledige dev-asset pack</li>
-        <li>Publieke issue-tracker toegang</li>
-        <li>Discord developer kanaal</li>
-        <li>Vroege betas + builds</li>
-      </ul>
-    </div>
-  </div>
-  <a href="https://patreon.com/retrostudio" class="btn-primary" style="display:inline-block;">Steun op Patreon →</a>
-</section>
+  </section>
 
-<!-- FOOTER -->
-<footer>
-  <span class="footer-logo">RETROSTUDIO</span>
-  <span class="footer-copy">© 2026 — Brussel, België</span>
-  <ul class="footer-links">
-    <li><a href="#">itch.io</a></li>
-    <li><a href="#">Discord</a></li>
-    <li><a href="#">Twitter</a></li>
-    <li><a href="#">Patreon</a></li>
-  </ul>
-</footer>
+  <!-- FOOTER -->
+  <footer>
+    <span class="footer-logo">RETROSTUDIO</span>
+    <span class="footer-copy">© 2026 — Brussel, België</span>
+    <span style="font-size:11px;color:var(--muted);">Contact: <a href="mailto:contact@nsrddyn.com"
+        style="color:var(--muted);text-decoration:underline;">contact@nsrddyn.com</a></span>
+    <ul class="footer-links">
+      <li><a href="https://retrostudio.itch.io" target="_blank" rel="noopener">itch.io</a></li>
+      <li><a href="https://discord.com" target="_blank" rel="noopener">Discord</a></li>
+      <li><a href="https://twitter.com" target="_blank" rel="noopener">Twitter</a></li>
+      <li><a href="https://patreon.com" target="_blank" rel="noopener">Patreon</a></li>
+    </ul>
+  </footer>
 
-<script>
-// ── Pixel art canvas thumbnails ──
-function drawPixelScene(canvasId, palette, scene) {
-  const canvas = document.getElementById(canvasId);
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  ctx.imageSmoothingEnabled = false;
-  const W = canvas.width, H = canvas.height;
-  ctx.clearRect(0, 0, W, H);
+  <script>
+    // ── Pixel art canvas thumbnails ──
+    function drawPixelScene(canvasId, palette, scene) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      const W = canvas.width, H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
 
-  scene.forEach(({ x, y, w, h, color }) => {
-    ctx.fillStyle = palette[color] || color;
-    ctx.fillRect(x, y, w, h);
-  });
-}
-
-// Dungeon scene
-drawPixelScene('c1',
-  { bg:'#0d1117', wall:'#2a2a4a', floor:'#1a1a2e', hero:'#e8ff00', enemy:'#ff5577', torch:'#ffaa00', stone:'#1f1f35' },
-  [
-    // floor tiles
-    ...Array.from({length:64}, (_,i) => ({x:i,y:20,w:1,h:16,color:'floor'})),
-    // walls
-    {x:0,y:0,w:64,h:20,color:'bg'},
-    {x:0,y:0,w:4,h:36,color:'wall'},
-    {x:60,y:0,w:4,h:36,color:'wall'},
-    // stones
-    {x:4,y:16,w:56,h:4,color:'stone'},
-    // hero
-    {x:10,y:14,w:4,h:6,color:'hero'},
-    {x:11,y:12,w:2,h:2,color:'hero'},
-    // enemy
-    {x:42,y:14,w:5,h:6,color:'enemy'},
-    {x:43,y:12,w:3,h:2,color:'enemy'},
-    // torch
-    {x:6,y:10,w:2,h:4,color:'torch'},
-    {x:56,y:10,w:2,h:4,color:'torch'},
-    // torch glow
-    {x:4,y:8,w:6,h:2,color:'#ff880044'},
-  ]
-);
-
-// Void runner scene
-drawPixelScene('c2',
-  { bg:'#080d12', star:'#ffffff', planet:'#334466', ship:'#00ffcc', trail:'#005544', asteroid:'#445566' },
-  [
-    {x:0,y:0,w:64,h:36,color:'bg'},
-    // stars
-    {x:5,y:3,w:1,h:1,color:'star'},{x:15,y:8,w:1,h:1,color:'star'},
-    {x:30,y:2,w:1,h:1,color:'star'},{x:45,y:12,w:1,h:1,color:'star'},
-    {x:55,y:5,w:1,h:1,color:'star'},{x:22,y:18,w:1,h:1,color:'star'},
-    {x:50,y:28,w:1,h:1,color:'star'},{x:8,y:22,w:1,h:1,color:'star'},
-    {x:38,y:30,w:1,h:1,color:'star'},{x:62,y:20,w:1,h:1,color:'star'},
-    // planet
-    {x:48,y:2,w:10,h:10,color:'planet'},
-    // ship
-    {x:12,y:15,w:8,h:4,color:'ship'},
-    {x:14,y:13,w:4,h:2,color:'ship'},
-    // trail
-    {x:4,y:16,w:8,h:2,color:'trail'},
-    {x:2,y:17,w:4,h:1,color:'#003322'},
-    // asteroid
-    {x:32,y:10,w:5,h:5,color:'asteroid'},
-    {x:55,y:22,w:4,h:4,color:'asteroid'},
-  ]
-);
-
-// Grid puzzle scene
-drawPixelScene('c3',
-  { bg:'#0a1208', grid:'#1a2818', wall:'#2a4228', box:'#8b6914', goal:'#00cc66', player:'#e8ff00', solved:'#00ffcc' },
-  [
-    {x:0,y:0,w:64,h:36,color:'bg'},
-    // grid lines
-    ...Array.from({length:8},(_,i)=>({x:i*8,y:0,w:1,h:36,color:'grid'})),
-    ...Array.from({length:5},(_,i)=>({x:0,y:i*8,w:64,h:1,color:'grid'})),
-    // walls
-    {x:0,y:0,w:8,h:36,color:'wall'},
-    {x:56,y:0,w:8,h:36,color:'wall'},
-    {x:0,y:0,w:64,h:8,color:'wall'},
-    {x:0,y:28,w:64,h:8,color:'wall'},
-    {x:24,y:8,w:8,h:8,color:'wall'},
-    // goal squares
-    {x:9,y:9,w:6,h:6,color:'goal'},
-    {x:41,y:9,w:6,h:6,color:'goal'},
-    // boxes
-    {x:17,y:9,w:6,h:6,color:'box'},
-    {x:33,y:17,w:6,h:6,color:'solved'},
-    // player
-    {x:33,y:9,w:6,h:6,color:'player'},
-  ]
-);
-
-// ── Scroll reveal ──
-const reveals = document.querySelectorAll('.reveal');
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach((e, i) => {
-    if (e.isIntersecting) {
-      setTimeout(() => e.target.classList.add('visible'), i * 80);
-      observer.unobserve(e.target);
+      scene.forEach(({ x, y, w, h, color }) => {
+        ctx.fillStyle = palette[color] || color;
+        ctx.fillRect(x, y, w, h);
+      });
     }
-  });
-}, { threshold: 0.1 });
-reveals.forEach(el => observer.observe(el));
-</script>
+
+    // Dungeon scene
+    drawPixelScene('c1',
+      { bg: '#0d1117', wall: '#2a2a4a', floor: '#1a1a2e', hero: '#e8ff00', enemy: '#ff5577', torch: '#ffaa00', stone: '#1f1f35' },
+      [
+        // floor tiles
+        ...Array.from({ length: 64 }, (_, i) => ({ x: i, y: 20, w: 1, h: 16, color: 'floor' })),
+        // walls
+        { x: 0, y: 0, w: 64, h: 20, color: 'bg' },
+        { x: 0, y: 0, w: 4, h: 36, color: 'wall' },
+        { x: 60, y: 0, w: 4, h: 36, color: 'wall' },
+        // stones
+        { x: 4, y: 16, w: 56, h: 4, color: 'stone' },
+        // hero
+        { x: 10, y: 14, w: 4, h: 6, color: 'hero' },
+        { x: 11, y: 12, w: 2, h: 2, color: 'hero' },
+        // enemy
+        { x: 42, y: 14, w: 5, h: 6, color: 'enemy' },
+        { x: 43, y: 12, w: 3, h: 2, color: 'enemy' },
+        // torch
+        { x: 6, y: 10, w: 2, h: 4, color: 'torch' },
+        { x: 56, y: 10, w: 2, h: 4, color: 'torch' },
+        // torch glow
+        { x: 4, y: 8, w: 6, h: 2, color: '#ff880044' },
+      ]
+    );
+
+    // Void runner scene
+    drawPixelScene('c2',
+      { bg: '#080d12', star: '#ffffff', planet: '#334466', ship: '#00ffcc', trail: '#005544', asteroid: '#445566' },
+      [
+        { x: 0, y: 0, w: 64, h: 36, color: 'bg' },
+        // stars
+        { x: 5, y: 3, w: 1, h: 1, color: 'star' }, { x: 15, y: 8, w: 1, h: 1, color: 'star' },
+        { x: 30, y: 2, w: 1, h: 1, color: 'star' }, { x: 45, y: 12, w: 1, h: 1, color: 'star' },
+        { x: 55, y: 5, w: 1, h: 1, color: 'star' }, { x: 22, y: 18, w: 1, h: 1, color: 'star' },
+        { x: 50, y: 28, w: 1, h: 1, color: 'star' }, { x: 8, y: 22, w: 1, h: 1, color: 'star' },
+        { x: 38, y: 30, w: 1, h: 1, color: 'star' }, { x: 62, y: 20, w: 1, h: 1, color: 'star' },
+        // planet
+        { x: 48, y: 2, w: 10, h: 10, color: 'planet' },
+        // ship
+        { x: 12, y: 15, w: 8, h: 4, color: 'ship' },
+        { x: 14, y: 13, w: 4, h: 2, color: 'ship' },
+        // trail
+        { x: 4, y: 16, w: 8, h: 2, color: 'trail' },
+        { x: 2, y: 17, w: 4, h: 1, color: '#003322' },
+        // asteroid
+        { x: 32, y: 10, w: 5, h: 5, color: 'asteroid' },
+        { x: 55, y: 22, w: 4, h: 4, color: 'asteroid' },
+      ]
+    );
+
+    // Grid puzzle scene
+    drawPixelScene('c3',
+      { bg: '#0a1208', grid: '#1a2818', wall: '#2a4228', box: '#8b6914', goal: '#00cc66', player: '#e8ff00', solved: '#00ffcc' },
+      [
+        { x: 0, y: 0, w: 64, h: 36, color: 'bg' },
+        // grid lines
+        ...Array.from({ length: 8 }, (_, i) => ({ x: i * 8, y: 0, w: 1, h: 36, color: 'grid' })),
+        ...Array.from({ length: 5 }, (_, i) => ({ x: 0, y: i * 8, w: 64, h: 1, color: 'grid' })),
+        // walls
+        { x: 0, y: 0, w: 8, h: 36, color: 'wall' },
+        { x: 56, y: 0, w: 8, h: 36, color: 'wall' },
+        { x: 0, y: 0, w: 64, h: 8, color: 'wall' },
+        { x: 0, y: 28, w: 64, h: 8, color: 'wall' },
+        { x: 24, y: 8, w: 8, h: 8, color: 'wall' },
+        // goal squares
+        { x: 9, y: 9, w: 6, h: 6, color: 'goal' },
+        { x: 41, y: 9, w: 6, h: 6, color: 'goal' },
+        // boxes
+        { x: 17, y: 9, w: 6, h: 6, color: 'box' },
+        { x: 33, y: 17, w: 6, h: 6, color: 'solved' },
+        // player
+        { x: 33, y: 9, w: 6, h: 6, color: 'player' },
+      ]
+    );
+
+    // ── Scroll reveal ──
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((e, i) => {
+        if (e.isIntersecting) {
+          setTimeout(() => e.target.classList.add('visible'), i * 80);
+          observer.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    reveals.forEach(el => observer.observe(el));
+  </script>
 </body>
+
 </html>
