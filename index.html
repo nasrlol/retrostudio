@@ -9,16 +9,15 @@
     @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&display=swap');
 
     :root {
-      --bg: #0a0a0f;
-      --bg2: #0f0f1a;
-      --surface: #13131f;
-      --border: #2a2a3f;
+      --bg: #1c1c28;
+      --bg2: #242432;
+      --surface: #2b2b3c;
+      --border: #44445c;
       --accent: #e8ff00;
       --accent2: #00ffcc;
       --accent3: #ff5577;
       --text: #d0d0e8;
       --muted: #6060a0;
-      --pixel: 4px;
     }
 
     *,
@@ -67,6 +66,20 @@
       opacity: 0.4;
     }
 
+    /* ── SPACE GAME BACKGROUND ── */
+    /* z-index must stay negative: a fixed element at z-index 0 paints ABOVE all
+       non-positioned in-flow content, which would hide every section that isn't
+       explicitly positioned. -1 keeps it behind the page, above the body bg. */
+    #space-bg {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1;
+      display: block;
+      pointer-events: none;
+    }
+
     /* ── NAV ── */
     nav {
       position: fixed;
@@ -99,7 +112,6 @@
     }
 
     .nav-links a {
-      font-family: 'IBM Plex Mono', monospace;
       font-size: 12px;
       color: var(--muted);
       text-decoration: none;
@@ -119,7 +131,6 @@
       background: var(--accent);
       padding: 10px 16px;
       text-decoration: none;
-      image-rendering: pixelated;
       clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
       transition: background 0.15s, box-shadow 0.15s;
     }
@@ -152,14 +163,11 @@
     }
 
     .hero-eyebrow {
-      font-family: 'IBM Plex Mono', monospace;
       font-size: 11px;
       color: var(--accent2);
       letter-spacing: 0.3em;
       text-transform: uppercase;
       margin-bottom: 24px;
-      opacity: 0;
-      animation: fadeUp 0.6s ease 0.2s forwards;
     }
 
     .hero-eyebrow::before {
@@ -174,8 +182,6 @@
       color: #fff;
       max-width: 800px;
       margin-bottom: 8px;
-      opacity: 0;
-      animation: fadeUp 0.6s ease 0.4s forwards;
     }
 
     h1 span.accent {
@@ -193,8 +199,6 @@
       color: var(--muted);
       max-width: 520px;
       margin: 24px auto 48px;
-      opacity: 0;
-      animation: fadeUp 0.6s ease 0.6s forwards;
     }
 
     .hero-buttons {
@@ -202,8 +206,6 @@
       gap: 16px;
       justify-content: center;
       flex-wrap: wrap;
-      opacity: 0;
-      animation: fadeUp 0.6s ease 0.8s forwards;
     }
 
     .btn-primary {
@@ -251,8 +253,6 @@
       justify-content: center;
       margin-top: 64px;
       flex-wrap: wrap;
-      opacity: 0;
-      animation: fadeUp 0.6s ease 1s forwards;
     }
 
     .stat {
@@ -282,7 +282,6 @@
     }
 
     .section-label {
-      font-family: 'IBM Plex Mono', monospace;
       font-size: 11px;
       color: var(--accent3);
       letter-spacing: 0.3em;
@@ -373,10 +372,6 @@
     .game-pixel-art {
       width: 100%;
       aspect-ratio: 16/9;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 48px;
       position: relative;
       overflow: hidden;
     }
@@ -405,7 +400,6 @@
       font-size: 13px;
       color: var(--muted);
       margin-bottom: 16px;
-      font-family: 'IBM Plex Mono', monospace;
     }
 
     .game-meta {
@@ -423,7 +417,6 @@
     .game-platform {
       font-size: 11px;
       color: var(--muted);
-      font-family: 'IBM Plex Mono', monospace;
       letter-spacing: 0.1em;
     }
 
@@ -436,6 +429,123 @@
       padding: 4px 8px;
       background: var(--accent3);
       color: #fff;
+    }
+
+    /* ── GAMEPAD CURSOR DEMO ── */
+    .gamepad-hint {
+      font-size: 12px;
+      color: var(--muted);
+      margin: -32px 0 32px;
+      line-height: 1.7;
+    }
+
+    .gamepad-hint kbd {
+      font-size: 11px;
+      color: var(--accent2);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      padding: 1px 6px;
+      border-radius: 3px;
+    }
+
+    #gamepad-status {
+      position: fixed;
+      /* must clear the ~82px fixed nav, which sits at a higher z-index */
+      top: 96px;
+      right: 16px;
+      z-index: 90;
+      font-size: 11px;
+      color: var(--muted);
+      background: rgba(10, 10, 15, 0.85);
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 4px;
+      pointer-events: none;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    #gamepad-status.connected {
+      color: var(--accent2);
+      border-color: var(--accent2);
+    }
+
+    @media (max-width: 700px) {
+      #gamepad-status {
+        display: none;
+      }
+    }
+
+    /* the page IS the game: a gamepad-driven reticle roams the whole site */
+    #gp-cursor {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 22px;
+      height: 22px;
+      margin: -11px 0 0 -11px;
+      pointer-events: none;
+      z-index: 10000;
+      opacity: 0;
+      transition: opacity 0.25s;
+      will-change: transform;
+    }
+
+    #gp-cursor.active {
+      opacity: 1;
+    }
+
+    #gp-cursor::before,
+    #gp-cursor::after {
+      content: '';
+      position: absolute;
+      background: var(--accent);
+      box-shadow: 0 0 6px rgba(232, 255, 0, 0.8);
+    }
+
+    #gp-cursor::before {
+      left: 50%;
+      top: 0;
+      width: 2px;
+      height: 100%;
+      margin-left: -1px;
+    }
+
+    #gp-cursor::after {
+      top: 50%;
+      left: 0;
+      height: 2px;
+      width: 100%;
+      margin-top: -1px;
+    }
+
+    #gp-cursor.grabbing::before,
+    #gp-cursor.grabbing::after {
+      background: var(--accent2);
+      box-shadow: 0 0 8px rgba(0, 255, 204, 0.9);
+    }
+
+    /* interactive element currently under the gamepad reticle */
+    .gp-hover {
+      outline: 2px solid var(--accent2) !important;
+      outline-offset: 3px;
+      box-shadow: 0 0 16px rgba(0, 255, 204, 0.35) !important;
+    }
+
+    [data-game-entity] {
+      position: relative;
+    }
+
+    [data-game-entity].gp-hover {
+      outline: 2px dashed var(--accent) !important;
+      cursor: grab;
+    }
+
+    [data-game-entity].gp-grabbed {
+      z-index: 500;
+      outline: 2px solid var(--accent2) !important;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 255, 204, 0.5) !important;
+      cursor: grabbing;
+      transition: none !important;
     }
 
     /* ── PHILOSOPHY ── */
@@ -486,7 +596,11 @@
       color: var(--muted);
       font-size: 14px;
       margin-bottom: 16px;
-      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .philosophy-left p.philosophy-quote {
+      font-style: italic;
+      color: #4a4a7a;
     }
 
     .spec-list {
@@ -502,7 +616,6 @@
       padding: 16px;
       border: 1px solid var(--border);
       background: var(--surface);
-      font-family: 'IBM Plex Mono', monospace;
       font-size: 13px;
       color: var(--text);
       align-items: flex-start;
@@ -519,6 +632,13 @@
       color: var(--accent2);
       min-width: 24px;
       margin-top: 2px;
+    }
+
+    .spec-list strong {
+      color: #fff;
+      display: block;
+      margin-bottom: 4px;
+      font-size: 12px;
     }
 
     /* ── PATREON ── */
@@ -601,7 +721,6 @@
       color: var(--text);
       padding-left: 16px;
       position: relative;
-      font-family: 'IBM Plex Mono', monospace;
     }
 
     .tier-features li::before {
@@ -619,7 +738,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      flex-wrap: gap;
+      flex-wrap: wrap;
       gap: 16px;
     }
 
@@ -632,7 +751,16 @@
     .footer-copy {
       font-size: 11px;
       color: var(--muted);
-      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .footer-contact {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .footer-contact a {
+      color: var(--muted);
+      text-decoration: underline;
     }
 
     .footer-links {
@@ -645,7 +773,6 @@
       font-size: 11px;
       color: var(--muted);
       text-decoration: none;
-      font-family: 'IBM Plex Mono', monospace;
       transition: color 0.2s;
     }
 
@@ -654,18 +781,6 @@
     }
 
     /* ── ANIMATIONS ── */
-    @keyframes fadeUp {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
     @keyframes blink {
 
       0%,
@@ -684,18 +799,6 @@
       animation: blink 1s step-end infinite;
       color: var(--accent);
       font-size: 0.8em;
-    }
-
-    /* scroll reveal */
-    .reveal {
-      opacity: 0;
-      transform: translateY(24px);
-      transition: opacity 0.6s ease, transform 0.6s ease;
-    }
-
-    .reveal.visible {
-      opacity: 1;
-      transform: none;
     }
 
     /* Contact form styling */
@@ -763,6 +866,8 @@
 
 <body>
 
+  <canvas id="space-bg" aria-hidden="true"></canvas>
+
   <!-- NAV -->
   <nav>
     <a href="#" class="nav-logo">RETROSTUDIO</a>
@@ -773,6 +878,9 @@
     </ul>
     <a href="https://retrostudio.itch.io" class="nav-cta">itch.io ↗</a>
   </nav>
+
+  <div id="gamepad-status"></div>
+  <div id="gp-cursor" aria-hidden="true"></div>
 
   <!-- HERO -->
   <section id="hero">
@@ -812,19 +920,19 @@
   <!-- MANIFESTO -->
   <section id="manifesto">
     <p class="section-label">Manifest</p>
-    <div class="manifesto-block reveal" data-n="01">
+    <div class="manifesto-block" data-n="01">
       <p>Games zijn te groot geworden. <strong>RetroStudio</strong> maakt games die je op vijf minuten kan installeren,
         spelen, en begrijpen.</p>
     </div>
-    <div class="manifesto-block reveal" data-n="02">
+    <div class="manifesto-block" data-n="02">
       <p>Elke game werkt op <strong>hardware uit 2008</strong>. Als het niet draait op een oude laptop, is het ons
         probleem — niet het jouwe.</p>
     </div>
-    <div class="manifesto-block reveal" data-n="03">
+    <div class="manifesto-block" data-n="03">
       <p>Geen analytics. Geen launcher. Geen <strong>optionele DLC</strong> die eigenlijk verplicht aanvoelt. Je betaalt
         één keer en krijgt het hele spel.</p>
     </div>
-    <div class="manifesto-block reveal" data-n="04">
+    <div class="manifesto-block" data-n="04">
       <p>Open roadmap. Publieke issue-tracker. <strong>Transparantie</strong> als product, niet als marketingstrategie.
       </p>
     </div>
@@ -834,9 +942,12 @@
   <section id="games">
     <p class="section-label">Games</p>
     <h2 class="section-title">Alles wat we gemaakt hebben<span class="cursor"></span></h2>
+    <p class="gamepad-hint">🎮 Deze hele site is met een controller te besturen (of pijltjestoetsen): beweeg de
+      reticle, <kbd>A</kbd> / <kbd>Space</kbd> klikt knoppen &amp; links aan. Houd 'm ingedrukt boven een
+      GAME-tegel om 'm als een echte retro-entity op te pakken en te verslepen.</p>
     <div class="games-grid">
 
-      <a href="https://git.nsrddyn.com" target="_blank" rel="noopener" class="game-card reveal">
+      <a href="https://git.nsrddyn.com" target="_blank" rel="noopener" class="game-card" data-game-entity>
         <div class="game-pixel-art" style="background:#0d1117;">
           <canvas id="c1" width="64" height="36"></canvas>
         </div>
@@ -852,7 +963,7 @@
         </div>
       </a>
 
-      <a href="https://git.nsrddyn.com" target="_blank" rel="noopener" class="game-card reveal">
+      <a href="https://git.nsrddyn.com" target="_blank" rel="noopener" class="game-card" data-game-entity>
         <div class="game-pixel-art" style="background:#080d12;">
           <canvas id="c2" width="64" height="36"></canvas>
         </div>
@@ -866,7 +977,7 @@
         </div>
       </a>
 
-      <a href="https://git.nsrddyn.com" target="_blank" rel="noopener" class="game-card reveal">
+      <a href="https://git.nsrddyn.com" target="_blank" rel="noopener" class="game-card" data-game-entity>
         <div class="game-pixel-art" style="background:#0a1208;">
           <canvas id="c3" width="64" height="36"></canvas>
         </div>
@@ -886,47 +997,47 @@
   <!-- PHILOSOPHY -->
   <section id="philosophy">
     <div class="philosophy-inner">
-      <div class="philosophy-left reveal">
+      <div class="philosophy-left">
         <h2>Gebouwd van<br>nul. Echt.</h2>
         <p>Geen Unity. Geen Unreal. Elke game is geschreven in C, met een handmade engine die precies doet wat nodig is
           en niks meer.</p>
         <p>Dit is geen nostalgie. Het is een keuze: als je begrijpt wat er écht gebeurt, maak je betere software.</p>
-        <p style="font-style:italic; color:#4a4a7a;">"Most software does too much."</p>
+        <p class="philosophy-quote">"Most software does too much."</p>
       </div>
-      <div class="philosophy-right reveal">
+      <div class="philosophy-right">
         <ul class="spec-list">
           <li>
             <span class="spec-icon">▸</span>
             <div>
-              <strong style="color:#fff; display:block; margin-bottom:4px; font-size:12px;">Handmade engine</strong>
+              <strong>Handmade engine</strong>
               Geschreven in C. Geen game framework. Directe controle over elk pixel.
             </div>
           </li>
           <li>
             <span class="spec-icon">▸</span>
             <div>
-              <strong style="color:#fff; display:block; margin-bottom:4px; font-size:12px;">Minimale footprint</strong>
+              <strong>Minimale footprint</strong>
               Elke game onder 100MB. Werkt op hardware van een decennium oud.
             </div>
           </li>
           <li>
             <span class="spec-icon">▸</span>
             <div>
-              <strong style="color:#fff; display:block; margin-bottom:4px; font-size:12px;">Geen DRM</strong>
+              <strong>Geen DRM</strong>
               Je koopt het. Je hebt het. Geen online check, geen key revoke.
             </div>
           </li>
           <li>
             <span class="spec-icon">▸</span>
             <div>
-              <strong style="color:#fff; display:block; margin-bottom:4px; font-size:12px;">Open roadmap</strong>
+              <strong>Open roadmap</strong>
               Publieke issue-tracker. Iedereen ziet wat er wordt gebouwd en wanneer.
             </div>
           </li>
           <li>
             <span class="spec-icon">▸</span>
             <div>
-              <strong style="color:#fff; display:block; margin-bottom:4px; font-size:12px;">Solo developer</strong>
+              <strong>Solo developer</strong>
               Één persoon. Geen publisher. Geen investor. Rechte lijn van idee naar spel.
             </div>
           </li>
@@ -937,10 +1048,10 @@
 
   <!-- SUPPORT -->
   <section id="support">
-    <p class="section-label" style="justify-content:center;">Support</p>
+    <p class="section-label">Support</p>
     <h2>Geloof je in wat<br>we bouwen?</h2>
     <p>Vroege toegang, dev-assets, en directe lijn naar de roadmap. Geen bullshit.</p>
-    <div class="tiers reveal">
+    <div class="tiers">
       <div class="tier">
         <p class="tier-label">Basis</p>
         <p class="tier-price">€3 <span>/ maand</span></p>
@@ -963,7 +1074,7 @@
       </div>
     </div>
     <!-- Contactformulier (stuurt naar e-mail adres op nsrddyn.com via mailto) -->
-    <form action="mailto:contact@nsrddyn.com" method="post" enctype="text/plain" class="contact-form reveal">
+    <form action="mailto:contact@nsrddyn.com" method="post" enctype="text/plain" class="contact-form">
       <div class="form-row">
         <label>
           Naam
@@ -989,8 +1100,7 @@
   <footer>
     <span class="footer-logo">RETROSTUDIO</span>
     <span class="footer-copy">© 2026 — Brussel, België</span>
-    <span style="font-size:11px;color:var(--muted);">Contact: <a href="mailto:contact@nsrddyn.com"
-        style="color:var(--muted);text-decoration:underline;">contact@nsrddyn.com</a></span>
+    <span class="footer-contact">Contact: <a href="mailto:contact@nsrddyn.com">contact@nsrddyn.com</a></span>
     <ul class="footer-links">
       <li><a href="https://retrostudio.itch.io" target="_blank" rel="noopener">itch.io</a></li>
     </ul>
@@ -1088,17 +1198,299 @@
       ]
     );
 
-    // ── Scroll reveal ──
-    const reveals = document.querySelectorAll('.reveal');
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((e, i) => {
-        if (e.isIntersecting) {
-          setTimeout(() => e.target.classList.add('visible'), i * 80);
-          observer.unobserve(e.target);
+    // ── Ambient space game running behind the whole page ──
+    (function () {
+      const canvas = document.getElementById('space-bg');
+      const ctx = canvas.getContext('2d');
+      const bgColor = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#1c1c28';
+      const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      const rand = (min, max) => min + Math.random() * (max - min);
+      const STAR_LAYERS = [
+        { count: 70, speed: 5, size: 1, alpha: 0.3 },
+        { count: 45, speed: 12, size: 1, alpha: 0.5 },
+        { count: 22, speed: 24, size: 2, alpha: 0.75 },
+      ];
+
+      let W, H, stars, asteroids, ship = null, shipTimer = rand(3, 7);
+
+      function buildStars() {
+        stars = STAR_LAYERS.flatMap(layer => Array.from({ length: layer.count }, () => ({
+          x: rand(0, W), y: rand(0, H),
+          speed: layer.speed, size: layer.size, baseAlpha: layer.alpha,
+          twinklePhase: rand(0, Math.PI * 2),
+        })));
+      }
+
+      function spawnAsteroid(fresh) {
+        const size = rand(3, 7);
+        return {
+          x: rand(0, W), y: fresh ? rand(-40, -10) : rand(-H, 0),
+          size, rot: rand(0, Math.PI * 2), rotSpeed: rand(-0.3, 0.3),
+          vy: rand(6, 16), vx: rand(-6, 6),
+        };
+      }
+
+      function buildAsteroids() {
+        asteroids = Array.from({ length: 6 }, () => spawnAsteroid(false));
+      }
+
+      function spawnShip() {
+        const fromLeft = Math.random() < 0.5;
+        ship = {
+          x: fromLeft ? -20 : W + 20,
+          y: rand(H * 0.1, H * 0.7),
+          vx: (fromLeft ? 1 : -1) * rand(60, 110),
+          trail: [],
+        };
+      }
+
+      function resize() {
+        W = canvas.width = window.innerWidth;
+        H = canvas.height = window.innerHeight;
+        buildStars();
+        buildAsteroids();
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      function drawStars(animate, dt) {
+        ctx.fillStyle = '#ffffff';
+        stars.forEach(s => {
+          if (animate) {
+            s.y += s.speed * dt;
+            if (s.y > H) { s.y = -2; s.x = rand(0, W); }
+            s.twinklePhase += dt * 2;
+          }
+          const tw = animate ? 0.6 + 0.4 * Math.sin(s.twinklePhase) : 1;
+          ctx.globalAlpha = s.baseAlpha * tw;
+          ctx.fillRect(s.x, s.y, s.size, s.size);
+        });
+        ctx.globalAlpha = 1;
+      }
+
+      if (reduceMotion) {
+        // static single frame, no motion, respects the user's OS preference
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, W, H);
+        drawStars(false, 0);
+        return;
+      }
+
+      let last = performance.now();
+      function frame(now) {
+        const dt = Math.min(0.05, (now - last) / 1000);
+        last = now;
+
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, W, H);
+
+        drawStars(true, dt);
+
+        ctx.fillStyle = '#4a5570';
+        asteroids.forEach((a, i) => {
+          a.x += a.vx * dt;
+          a.y += a.vy * dt;
+          a.rot += a.rotSpeed * dt;
+          if (a.y - a.size > H || a.x < -20 || a.x > W + 20) asteroids[i] = spawnAsteroid(true);
+          ctx.save();
+          ctx.translate(a.x, a.y);
+          ctx.rotate(a.rot);
+          ctx.fillRect(-a.size / 2, -a.size / 2, a.size, a.size);
+          ctx.restore();
+        });
+
+        shipTimer -= dt;
+        if (!ship && shipTimer <= 0) spawnShip();
+        if (ship) {
+          ship.x += ship.vx * dt;
+          ship.trail.push({ x: ship.x, y: ship.y, life: 1 });
+          ship.trail.forEach(t => t.life -= dt * 1.5);
+          ship.trail = ship.trail.filter(t => t.life > 0);
+
+          ship.trail.forEach(t => {
+            ctx.fillStyle = `rgba(0, 255, 204, ${(t.life * 0.4).toFixed(2)})`;
+            ctx.fillRect(t.x - 1, t.y, 2, 1);
+          });
+
+          const dir = ship.vx > 0 ? 1 : -1;
+          ctx.fillStyle = '#00ffcc';
+          ctx.fillRect(ship.x - 4 * dir, ship.y, 8, 3);
+          ctx.fillRect(ship.x - dir, ship.y - 2, 3, 2);
+
+          if (ship.x < -30 || ship.x > W + 30) {
+            ship = null;
+            shipTimer = rand(6, 14);
+          }
         }
+
+        requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    })();
+
+    // ── The page IS the game: a gamepad/keyboard-driven reticle roams the whole
+    // site, presses real buttons & links, and can pick up + drag real DOM
+    // elements marked [data-game-entity] (the three GAME tiles). ──
+    (function () {
+      const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+      const CLICKABLE = 'a[href], button, input[type="submit"], input[type="text"], input[type="email"], textarea';
+
+      const cursorEl = document.getElementById('gp-cursor');
+      const statusEl = document.getElementById('gamepad-status');
+
+      function setGamepadStatus(connected, text) {
+        statusEl.textContent = text;
+        statusEl.classList.toggle('connected', connected);
+      }
+      setGamepadStatus(false, '🎮 Geen controller — pijltjestoetsen actief');
+
+      const cursor = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      let hasMoved = false;
+      let hoveredEl = null;
+      let dragging = false;
+      let grabbedEl = null;
+      let grabOffsetX = 0, grabOffsetY = 0, grabBaseLeft = 0, grabBaseTop = 0;
+
+      // prep every entity so a transform-based drag never triggers layout reflow
+      document.querySelectorAll('[data-game-entity]').forEach(el => {
+        el.dataset.tx = '0';
+        el.dataset.ty = '0';
       });
-    }, { threshold: 0.1 });
-    reveals.forEach(el => observer.observe(el));
+
+      function activateAt(x, y) {
+        const el = document.elementFromPoint(x, y);
+        if (!el) return;
+        const entityEl = el.closest('[data-game-entity]');
+        if (entityEl) {
+          const rect = entityEl.getBoundingClientRect();
+          grabOffsetX = x - rect.left;
+          grabOffsetY = y - rect.top;
+          grabBaseLeft = rect.left - (parseFloat(entityEl.dataset.tx) || 0);
+          grabBaseTop = rect.top - (parseFloat(entityEl.dataset.ty) || 0);
+          grabbedEl = entityEl;
+          dragging = true;
+          entityEl.classList.add('gp-grabbed');
+          return;
+        }
+        const clickableEl = el.closest(CLICKABLE);
+        if (clickableEl) {
+          if (clickableEl.tagName === 'INPUT' || clickableEl.tagName === 'TEXTAREA') clickableEl.focus();
+          else clickableEl.click();
+        }
+      }
+
+      function releaseDrag() {
+        if (grabbedEl) grabbedEl.classList.remove('gp-grabbed');
+        dragging = false;
+        grabbedEl = null;
+      }
+
+      function updateHover() {
+        const el = hasMoved ? document.elementFromPoint(cursor.x, cursor.y) : null;
+        const next = el && (el.closest('[data-game-entity]') || el.closest(CLICKABLE));
+        if (next !== hoveredEl) {
+          if (hoveredEl) hoveredEl.classList.remove('gp-hover');
+          if (next) next.classList.add('gp-hover');
+          hoveredEl = next;
+        }
+      }
+
+      function moveCursorTo(nx, ny) {
+        cursor.x = clamp(nx, 0, window.innerWidth - 1);
+        cursor.y = clamp(ny, 0, window.innerHeight - 1);
+        if (!hasMoved) {
+          hasMoved = true;
+          cursorEl.classList.add('active');
+        }
+        if (dragging && grabbedEl) {
+          const newTX = (cursor.x - grabOffsetX) - grabBaseLeft;
+          const newTY = (cursor.y - grabOffsetY) - grabBaseTop;
+          // `translate` (not `transform`) so dragging never fights any other
+          // code that also animates `transform` on the entity
+          grabbedEl.style.translate = `${newTX}px ${newTY}px`;
+          grabbedEl.dataset.tx = newTX;
+          grabbedEl.dataset.ty = newTY;
+        } else if (!dragging) {
+          // edge auto-scroll only makes sense while free-roaming, not mid-drag.
+          // speed ramps with how deep the cursor is into the edge zone (0 at the
+          // zone's inner boundary, MAX_SPEED right at the true screen edge) so
+          // it's controllable instead of jumping straight to full speed and
+          // overshooting short sections.
+          const EDGE = 70, MAX_SPEED = 28;
+          if (cursor.y < EDGE) {
+            window.scrollBy(0, -MAX_SPEED * ((EDGE - cursor.y) / EDGE));
+          } else if (cursor.y > window.innerHeight - EDGE) {
+            window.scrollBy(0, MAX_SPEED * ((cursor.y - (window.innerHeight - EDGE)) / EDGE));
+          }
+        }
+      }
+
+      // ── Keyboard fallback ──
+      const keysHeld = new Set();
+      const CONTROL_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Enter'];
+      const isActivateKey = key => key === ' ' || key === 'Enter';
+      window.addEventListener('keydown', e => {
+        if (CONTROL_KEYS.includes(e.key)) e.preventDefault();
+        keysHeld.add(e.key);
+        if (isActivateKey(e.key) && !e.repeat && !dragging) activateAt(cursor.x, cursor.y);
+      });
+      window.addEventListener('keyup', e => {
+        keysHeld.delete(e.key);
+        if (isActivateKey(e.key) && dragging) releaseDrag();
+      });
+
+      // ── Gamepad ──
+      let gpPrevActivate = false;
+      window.addEventListener('gamepadconnected', e => {
+        setGamepadStatus(true, `🎮 ${e.gamepad.id.slice(0, 40)} verbonden`);
+      });
+      window.addEventListener('gamepaddisconnected', () => {
+        setGamepadStatus(false, '🎮 Geen controller — pijltjestoetsen actief');
+      });
+
+      const KEY_SPEED = 9;
+      const GP_MAX_SPEED = 16;
+      const GP_DEAD = 0.15;
+
+      function frame() {
+        let dx = 0, dy = 0;
+        if (keysHeld.has('ArrowLeft')) dx -= KEY_SPEED;
+        if (keysHeld.has('ArrowRight')) dx += KEY_SPEED;
+        if (keysHeld.has('ArrowUp')) dy -= KEY_SPEED;
+        if (keysHeld.has('ArrowDown')) dy += KEY_SPEED;
+
+        const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+        const gp = pads && Array.from(pads).find(p => p);
+        if (gp) {
+          const ax = gp.axes[0] || 0, ay = gp.axes[1] || 0;
+          if (Math.abs(ax) > GP_DEAD) dx += ax * GP_MAX_SPEED;
+          if (Math.abs(ay) > GP_DEAD) dy += ay * GP_MAX_SPEED;
+          if (gp.buttons[14] && gp.buttons[14].pressed) dx -= GP_MAX_SPEED;
+          if (gp.buttons[15] && gp.buttons[15].pressed) dx += GP_MAX_SPEED;
+          if (gp.buttons[12] && gp.buttons[12].pressed) dy -= GP_MAX_SPEED;
+          if (gp.buttons[13] && gp.buttons[13].pressed) dy += GP_MAX_SPEED;
+
+          const activateHeld = !!(gp.buttons[0] && gp.buttons[0].pressed);
+          if (activateHeld && !gpPrevActivate) activateAt(cursor.x, cursor.y);
+          if (!activateHeld && gpPrevActivate && dragging) releaseDrag();
+          gpPrevActivate = activateHeld;
+        }
+
+        if (dx !== 0 || dy !== 0) moveCursorTo(cursor.x + dx, cursor.y + dy);
+        cursorEl.style.transform = `translate3d(${cursor.x}px, ${cursor.y}px, 0)`;
+        cursorEl.classList.toggle('grabbing', dragging);
+        updateHover();
+
+        requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+
+      window.addEventListener('resize', () => {
+        cursor.x = clamp(cursor.x, 0, window.innerWidth - 1);
+        cursor.y = clamp(cursor.y, 0, window.innerHeight - 1);
+      });
+    })();
   </script>
 </body>
 
