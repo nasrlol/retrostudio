@@ -155,6 +155,8 @@
     .hero-grid-bg {
       position: absolute;
       inset: 0;
+      /* decoration only — must not intercept the reticle's hit-testing */
+      pointer-events: none;
       background-image:
         linear-gradient(rgba(232, 255, 0, 0.04) 1px, transparent 1px),
         linear-gradient(90deg, rgba(232, 255, 0, 0.04) 1px, transparent 1px);
@@ -476,7 +478,7 @@
     }
 
     /* the page IS the game: a gamepad-driven reticle roams the whole site */
-    #gp-cursor {
+    #ecs-cursor {
       position: fixed;
       top: 0;
       left: 0;
@@ -490,19 +492,19 @@
       will-change: transform;
     }
 
-    #gp-cursor.active {
+    #ecs-cursor.active {
       opacity: 1;
     }
 
-    #gp-cursor::before,
-    #gp-cursor::after {
+    #ecs-cursor::before,
+    #ecs-cursor::after {
       content: '';
       position: absolute;
       background: var(--accent);
       box-shadow: 0 0 6px rgba(232, 255, 0, 0.8);
     }
 
-    #gp-cursor::before {
+    #ecs-cursor::before {
       left: 50%;
       top: 0;
       width: 2px;
@@ -510,7 +512,7 @@
       margin-left: -1px;
     }
 
-    #gp-cursor::after {
+    #ecs-cursor::after {
       top: 50%;
       left: 0;
       height: 2px;
@@ -518,34 +520,35 @@
       margin-top: -1px;
     }
 
-    #gp-cursor.grabbing::before,
-    #gp-cursor.grabbing::after {
+    #ecs-cursor.grabbing::before,
+    #ecs-cursor.grabbing::after {
       background: var(--accent2);
       box-shadow: 0 0 8px rgba(0, 255, 204, 0.9);
     }
 
-    /* interactive element currently under the gamepad reticle */
-    .gp-hover {
-      outline: 2px solid var(--accent2) !important;
+    /* ── ECS entity states ──
+       Every page element is registered as an entity, so these two classes are
+       the only visual difference between "under the reticle" and "held". */
+    .ecs-hover {
+      outline: 2px dashed var(--accent2) !important;
       outline-offset: 3px;
-      box-shadow: 0 0 16px rgba(0, 255, 204, 0.35) !important;
-    }
-
-    [data-game-entity] {
-      position: relative;
-    }
-
-    [data-game-entity].gp-hover {
-      outline: 2px dashed var(--accent) !important;
       cursor: grab;
     }
 
-    [data-game-entity].gp-grabbed {
+    .ecs-grabbed {
+      /* position lets z-index apply even to normally-static entities */
+      position: relative;
       z-index: 500;
       outline: 2px solid var(--accent2) !important;
       box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 255, 204, 0.5) !important;
       cursor: grabbing;
       transition: none !important;
+    }
+
+    /* an entity that has been carried away from its layout position */
+    .ecs-moved {
+      outline: 1px dotted var(--border);
+      outline-offset: 2px;
     }
 
     /* ── PHILOSOPHY ── */
@@ -880,7 +883,7 @@
   </nav>
 
   <div id="gamepad-status"></div>
-  <div id="gp-cursor" aria-hidden="true"></div>
+  <div id="ecs-cursor" aria-hidden="true"></div>
 
   <!-- HERO -->
   <section id="hero">
@@ -942,12 +945,12 @@
   <section id="games">
     <p class="section-label">Games</p>
     <h2 class="section-title">Alles wat we gemaakt hebben<span class="cursor"></span></h2>
-    <p class="gamepad-hint">🎮 Deze hele site is met een controller te besturen (of pijltjestoetsen): beweeg de
-      reticle, <kbd>A</kbd> / <kbd>Space</kbd> klikt knoppen &amp; links aan. Houd 'm ingedrukt boven een
-      GAME-tegel om 'm als een echte retro-entity op te pakken en te verslepen.</p>
+    <p class="gamepad-hint">🎮 Deze pagina draait als een ECS: <strong>elk element is een entity</strong>. Beweeg de
+      reticle met de stick of <kbd>↑↓←→</kbd>. <kbd>A</kbd> / <kbd>Space</kbd> tikken = klikken; ingedrukt houden
+      en bewegen = het element oppakken en verslepen. <kbd>Start</kbd> / <kbd>R</kbd> zet alles terug.</p>
     <div class="games-grid">
 
-      <a href="https://git.nsrddyn.com" target="_blank" rel="noopener" class="game-card" data-game-entity>
+      <a href="https://git.nsrddyn.com" target="_blank" rel="noopener" class="game-card">
         <div class="game-pixel-art" style="background:#0d1117;">
           <canvas id="c1" width="64" height="36"></canvas>
         </div>
@@ -963,7 +966,7 @@
         </div>
       </a>
 
-      <a href="https://git.nsrddyn.com" target="_blank" rel="noopener" class="game-card" data-game-entity>
+      <a href="https://git.nsrddyn.com" target="_blank" rel="noopener" class="game-card">
         <div class="game-pixel-art" style="background:#080d12;">
           <canvas id="c2" width="64" height="36"></canvas>
         </div>
@@ -977,7 +980,7 @@
         </div>
       </a>
 
-      <a href="https://git.nsrddyn.com" target="_blank" rel="noopener" class="game-card" data-game-entity>
+      <a href="https://git.nsrddyn.com" target="_blank" rel="noopener" class="game-card">
         <div class="game-pixel-art" style="background:#0a1208;">
           <canvas id="c3" width="64" height="36"></canvas>
         </div>
@@ -1198,299 +1201,472 @@
       ]
     );
 
-    // ── Ambient space game running behind the whole page ──
-    (function () {
-      const canvas = document.getElementById('space-bg');
-      const ctx = canvas.getContext('2d');
-      const bgColor = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#1c1c28';
-      const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // ═══════════════════════════════════════════════════════════════════
+    // The page runs as a small ECS.
+    //
+    //   Entity    — an integer id, nothing more
+    //   Component — plain data in a Map<entityId, data>, one Map per type
+    //   System    — a function run once per frame over a component query
+    //
+    // Two families of entity share one world and one frame loop:
+    //
+    //   · DOM entities    — every visible element on the page. They carry
+    //                       Dom + Transform + Draggable, which is the whole
+    //                       reason any of them can be picked up and moved.
+    //   · Canvas entities — the starfield behind the page: stars, asteroids,
+    //                       the ship and its trail. They carry Position +
+    //                       Velocity + Sprite and are drawn to #space-bg.
+    //
+    // New behaviour means a new component and a new system, rather than
+    // another special case threaded through one monolithic frame function.
+    // ═══════════════════════════════════════════════════════════════════
 
-      const rand = (min, max) => min + Math.random() * (max - min);
-      const STAR_LAYERS = [
-        { count: 70, speed: 5, size: 1, alpha: 0.3 },
-        { count: 45, speed: 12, size: 1, alpha: 0.5 },
-        { count: 22, speed: 24, size: 2, alpha: 0.75 },
-      ];
+    function createWorld() {
+      let nextId = 1;
+      const stores = new Map();   // component name -> Map<entityId, data>
+      const systems = [];
 
-      let W, H, stars, asteroids, ship = null, shipTimer = rand(3, 7);
-
-      function buildStars() {
-        stars = STAR_LAYERS.flatMap(layer => Array.from({ length: layer.count }, () => ({
-          x: rand(0, W), y: rand(0, H),
-          speed: layer.speed, size: layer.size, baseAlpha: layer.alpha,
-          twinklePhase: rand(0, Math.PI * 2),
-        })));
+      function store(name) {
+        let s = stores.get(name);
+        if (!s) { s = new Map(); stores.set(name, s); }
+        return s;
       }
 
-      function spawnAsteroid(fresh) {
-        const size = rand(3, 7);
-        return {
-          x: rand(0, W), y: fresh ? rand(-40, -10) : rand(-H, 0),
-          size, rot: rand(0, Math.PI * 2), rotSpeed: rand(-0.3, 0.3),
-          vy: rand(6, 16), vx: rand(-6, 6),
-        };
-      }
+      return {
+        resources: {},
+        create() { return nextId++; },
+        destroy(id) { stores.forEach(s => s.delete(id)); },
+        add(id, name, data = {}) { store(name).set(id, data); return data; },
+        get(id, name) { return store(name).get(id); },
 
-      function buildAsteroids() {
-        asteroids = Array.from({ length: 6 }, () => spawnAsteroid(false));
-      }
-
-      function spawnShip() {
-        const fromLeft = Math.random() < 0.5;
-        ship = {
-          x: fromLeft ? -20 : W + 20,
-          y: rand(H * 0.1, H * 0.7),
-          vx: (fromLeft ? 1 : -1) * rand(60, 110),
-          trail: [],
-        };
-      }
-
-      function resize() {
-        W = canvas.width = window.innerWidth;
-        H = canvas.height = window.innerHeight;
-        buildStars();
-        buildAsteroids();
-      }
-      window.addEventListener('resize', resize);
-      resize();
-
-      function drawStars(animate, dt) {
-        ctx.fillStyle = '#ffffff';
-        stars.forEach(s => {
-          if (animate) {
-            s.y += s.speed * dt;
-            if (s.y > H) { s.y = -2; s.x = rand(0, W); }
-            s.twinklePhase += dt * 2;
+        // every entity owning all named components; walks the smallest store
+        query(...names) {
+          const maps = names.map(store);
+          let smallest = maps[0];
+          for (const m of maps) if (m.size < smallest.size) smallest = m;
+          const out = [];
+          for (const id of smallest.keys()) {
+            if (maps.every(m => m.has(id))) out.push(id);
           }
-          const tw = animate ? 0.6 + 0.4 * Math.sin(s.twinklePhase) : 1;
-          ctx.globalAlpha = s.baseAlpha * tw;
-          ctx.fillRect(s.x, s.y, s.size, s.size);
-        });
-        ctx.globalAlpha = 1;
+          return out;
+        },
+
+        system(name, fn) { systems.push({ name, fn }); },
+        run(dt) { for (const s of systems) s.fn(this, dt); },
+      };
+    }
+
+    const world = createWorld();
+    const res = world.resources;
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    const rand = (min, max) => min + Math.random() * (max - min);
+
+    res.reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    res.input = { dx: 0, dy: 0, held: false, pressed: false, released: false, reset: false };
+    res.cursor = { x: window.innerWidth / 2, y: window.innerHeight / 2, dx: 0, dy: 0, scrollDy: 0, awake: false };
+    res.drag = { candidate: 0, entity: 0, startX: 0, startY: 0 };
+    res.hovered = 0;
+
+    const cursorEl = document.getElementById('ecs-cursor');
+    const statusEl = document.getElementById('gamepad-status');
+
+    function setGamepadStatus(connected, text) {
+      statusEl.textContent = text;
+      statusEl.classList.toggle('connected', connected);
+    }
+    setGamepadStatus(false, '🎮 Geen controller — pijltjestoetsen actief');
+
+    // ── DOM entities ────────────────────────────────────────────────────
+    // This list is the single place that decides what "every element" means.
+    const ENTITY_SELECTOR = [
+      '.nav-logo', '.nav-links li', '.nav-cta',
+      '.hero-eyebrow', '#hero h1', '.hero-sub', '.hero-buttons', '.stat',
+      '.section-label', '.section-title', '.gamepad-hint', '.manifesto-block',
+      '.game-card',
+      '.philosophy-left h2', '.philosophy-left p', '.spec-list li',
+      '#support h2', '#support > p', '.tier', '.contact-form',
+      '.footer-logo', '.footer-copy', '.footer-contact', '.footer-links li',
+    ].join(', ');
+
+    // querySelectorAll yields each element once even when several selectors
+    // match it, so overlapping entries above cannot double-register an entity.
+    document.querySelectorAll(ENTITY_SELECTOR).forEach(el => {
+      const id = world.create();
+      world.add(id, 'Dom', { el });
+      world.add(id, 'Transform', { x: 0, y: 0, dirty: false });
+      world.add(id, 'Draggable');
+      el.dataset.ecsId = id;
+    });
+
+    function entityFromPoint(x, y) {
+      const el = document.elementFromPoint(x, y);
+      const host = el && el.closest('[data-ecs-id]');
+      return host ? Number(host.dataset.ecsId) : 0;
+    }
+
+    const CLICKABLE = 'a[href], button, input[type="submit"], input[type="text"], input[type="email"], textarea';
+    function clickAt(x, y) {
+      const el = document.elementFromPoint(x, y);
+      const target = el && el.closest(CLICKABLE);
+      if (!target) return;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') target.focus();
+      else target.click();
+    }
+
+    // ── Canvas entities ─────────────────────────────────────────────────
+    const spaceCanvas = document.getElementById('space-bg');
+    res.canvas = {
+      el: spaceCanvas,
+      ctx: spaceCanvas.getContext('2d'),
+      w: 0,
+      h: 0,
+      bg: getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#1c1c28',
+    };
+    res.ship = { entity: 0, timer: rand(3, 7) };
+
+    const STAR_LAYERS = [
+      { count: 70, speed: 5, size: 1, alpha: 0.30 },
+      { count: 45, speed: 12, size: 1, alpha: 0.50 },
+      { count: 22, speed: 24, size: 2, alpha: 0.75 },
+    ];
+
+    function spawnStar(layer) {
+      const id = world.create();
+      world.add(id, 'Position', { x: rand(0, res.canvas.w), y: rand(0, res.canvas.h) });
+      world.add(id, 'Velocity', { vx: 0, vy: layer.speed });
+      world.add(id, 'Sprite', {
+        color: '#ffffff', alpha: layer.alpha,
+        parts: [{ dx: 0, dy: 0, w: layer.size, h: layer.size }],
+      });
+      world.add(id, 'Star', { phase: rand(0, Math.PI * 2) });
+    }
+
+    function spawnAsteroid(fromTop) {
+      const size = rand(3, 7);
+      const id = world.create();
+      world.add(id, 'Position', { x: rand(0, res.canvas.w), y: fromTop ? rand(-40, -10) : rand(0, res.canvas.h) });
+      world.add(id, 'Velocity', { vx: rand(-6, 6), vy: rand(6, 16) });
+      world.add(id, 'Spin', { angle: rand(0, Math.PI * 2), speed: rand(-0.3, 0.3) });
+      world.add(id, 'Sprite', {
+        color: '#4a5570', alpha: 1,
+        parts: [{ dx: -size / 2, dy: -size / 2, w: size, h: size }],
+      });
+      world.add(id, 'Asteroid', { size });
+    }
+
+    function spawnShip() {
+      const dir = Math.random() < 0.5 ? 1 : -1;
+      const id = world.create();
+      world.add(id, 'Position', {
+        x: dir > 0 ? -20 : res.canvas.w + 20,
+        y: rand(res.canvas.h * 0.1, res.canvas.h * 0.7),
+      });
+      world.add(id, 'Velocity', { vx: dir * rand(60, 110), vy: 0 });
+      world.add(id, 'Sprite', {
+        color: '#00ffcc', alpha: 1,
+        parts: [{ dx: -4 * dir, dy: 0, w: 8, h: 3 }, { dx: -dir, dy: -2, w: 3, h: 2 }],
+      });
+      world.add(id, 'Ship', { dir });
+      res.ship.entity = id;
+    }
+
+    function spawnTrail(x, y) {
+      const id = world.create();
+      world.add(id, 'Position', { x, y });
+      world.add(id, 'Sprite', { color: '#00ffcc', alpha: 0.4, parts: [{ dx: -1, dy: 0, w: 2, h: 1 }] });
+      world.add(id, 'Life', { t: 1, rate: 1.5 });
+    }
+
+    function rebuildStarfield() {
+      const c = res.canvas;
+      c.w = c.el.width = window.innerWidth;
+      c.h = c.el.height = window.innerHeight;
+      [...world.query('Star'), ...world.query('Asteroid')].forEach(id => world.destroy(id));
+      STAR_LAYERS.forEach(layer => {
+        for (let i = 0; i < layer.count; i++) spawnStar(layer);
+      });
+      for (let i = 0; i < 6; i++) spawnAsteroid(false);
+    }
+    rebuildStarfield();
+
+    // ── Raw input capture ───────────────────────────────────────────────
+    const keys = new Set();
+    const CONTROL_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Enter'];
+
+    // while a field has focus the keyboard belongs to the user, not the reticle
+    const isTyping = () => {
+      const el = document.activeElement;
+      return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+    };
+
+    window.addEventListener('keydown', e => {
+      if (isTyping()) return;
+      if (CONTROL_KEYS.includes(e.key)) e.preventDefault();
+      keys.add(e.key);
+      if ((e.key === 'r' || e.key === 'R') && !e.repeat) res.input.reset = true;
+    });
+    window.addEventListener('keyup', e => keys.delete(e.key));
+    window.addEventListener('blur', () => keys.clear());
+
+    window.addEventListener('gamepadconnected', e => setGamepadStatus(true, `🎮 ${e.gamepad.id.slice(0, 40)} verbonden`));
+    window.addEventListener('gamepaddisconnected', () => setGamepadStatus(false, '🎮 Geen controller — pijltjestoetsen actief'));
+
+    window.addEventListener('resize', () => {
+      rebuildStarfield();
+      res.cursor.x = clamp(res.cursor.x, 0, window.innerWidth - 1);
+      res.cursor.y = clamp(res.cursor.y, 0, window.innerHeight - 1);
+    });
+
+    // ── Systems ─────────────────────────────────────────────────────────
+    const KEY_SPEED = 9, GP_SPEED = 16, GP_DEAD = 0.15;
+    let gpPrevStart = false;
+
+    world.system('input', w => {
+      const inp = w.resources.input;
+      let dx = 0, dy = 0;
+      let held = keys.has(' ') || keys.has('Enter');
+
+      if (keys.has('ArrowLeft')) dx -= KEY_SPEED;
+      if (keys.has('ArrowRight')) dx += KEY_SPEED;
+      if (keys.has('ArrowUp')) dy -= KEY_SPEED;
+      if (keys.has('ArrowDown')) dy += KEY_SPEED;
+
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      const gp = pads && Array.from(pads).find(p => p);
+      if (gp) {
+        const ax = gp.axes[0] || 0, ay = gp.axes[1] || 0;
+        if (Math.abs(ax) > GP_DEAD) dx += ax * GP_SPEED;
+        if (Math.abs(ay) > GP_DEAD) dy += ay * GP_SPEED;
+        if (gp.buttons[14] && gp.buttons[14].pressed) dx -= GP_SPEED;
+        if (gp.buttons[15] && gp.buttons[15].pressed) dx += GP_SPEED;
+        if (gp.buttons[12] && gp.buttons[12].pressed) dy -= GP_SPEED;
+        if (gp.buttons[13] && gp.buttons[13].pressed) dy += GP_SPEED;
+        if (gp.buttons[0] && gp.buttons[0].pressed) held = true;
+
+        const start = !!(gp.buttons[9] && gp.buttons[9].pressed);
+        if (start && !gpPrevStart) inp.reset = true;
+        gpPrevStart = start;
       }
 
-      if (reduceMotion) {
-        // static single frame, no motion, respects the user's OS preference
-        ctx.fillStyle = bgColor;
-        ctx.fillRect(0, 0, W, H);
-        drawStars(false, 0);
+      inp.dx = dx;
+      inp.dy = dy;
+      inp.pressed = held && !inp.held;
+      inp.released = !held && inp.held;
+      inp.held = held;
+    });
+
+    world.system('cursor', w => {
+      const { input, cursor } = w.resources;
+      const fromX = cursor.x, fromY = cursor.y, scrollFrom = window.scrollY;
+
+      if (input.dx || input.dy) {
+        cursor.x = clamp(cursor.x + input.dx, 0, window.innerWidth - 1);
+        cursor.y = clamp(cursor.y + input.dy, 0, window.innerHeight - 1);
+        if (!cursor.awake) {
+          cursor.awake = true;
+          cursorEl.classList.add('active');
+        }
+
+        // edge auto-scroll, ramped by how deep into the band the reticle sits
+        // (0 at the inner boundary, full speed at the screen edge) so it stays
+        // controllable instead of overshooting short sections
+        const EDGE = 70, MAX_SCROLL = 28;
+        if (cursor.y < EDGE) {
+          window.scrollBy(0, -MAX_SCROLL * ((EDGE - cursor.y) / EDGE));
+        } else if (cursor.y > window.innerHeight - EDGE) {
+          window.scrollBy(0, MAX_SCROLL * ((cursor.y - (window.innerHeight - EDGE)) / EDGE));
+        }
+      }
+
+      cursor.dx = cursor.x - fromX;
+      cursor.dy = cursor.y - fromY;
+      cursor.scrollDy = window.scrollY - scrollFrom;
+    });
+
+    world.system('pick', w => {
+      const { input, cursor, drag } = w.resources;
+      const DRAG_THRESHOLD = 5;   // px of travel before a press becomes a drag
+
+      if (input.pressed) {
+        drag.candidate = entityFromPoint(cursor.x, cursor.y);
+        drag.startX = cursor.x;
+        drag.startY = cursor.y;
+      }
+
+      // a press only turns into a drag once the reticle actually travels, which
+      // leaves plain taps free to click the links and buttons underneath
+      if (input.held && drag.candidate && !drag.entity) {
+        const travel = Math.abs(cursor.x - drag.startX) + Math.abs(cursor.y - drag.startY);
+        if (travel > DRAG_THRESHOLD) {
+          drag.entity = drag.candidate;
+          w.get(drag.entity, 'Dom').el.classList.add('ecs-grabbed');
+        }
+      }
+
+      if (input.released) {
+        if (drag.entity) w.get(drag.entity, 'Dom').el.classList.remove('ecs-grabbed');
+        else clickAt(cursor.x, cursor.y);
+        drag.entity = 0;
+        drag.candidate = 0;
+      }
+    });
+
+    world.system('drag', w => {
+      const { cursor, drag } = w.resources;
+      if (!drag.entity) return;
+      const t = w.get(drag.entity, 'Transform');
+      // scrollDy keeps a held entity pinned to the reticle while the page moves
+      t.x += cursor.dx;
+      t.y += cursor.dy + cursor.scrollDy;
+      t.dirty = true;
+    });
+
+    world.system('reset', w => {
+      if (!w.resources.input.reset) return;
+      w.resources.input.reset = false;
+      for (const id of w.query('Dom', 'Transform')) {
+        const t = w.get(id, 'Transform');
+        if (!t.x && !t.y) continue;
+        t.x = 0;
+        t.y = 0;
+        t.dirty = true;
+      }
+    });
+
+    world.system('hover', w => {
+      const { cursor, drag } = w.resources;
+      if (!cursor.awake) return;
+      const id = drag.entity || entityFromPoint(cursor.x, cursor.y);
+      if (id === w.resources.hovered) return;
+
+      const prev = w.resources.hovered && w.get(w.resources.hovered, 'Dom');
+      if (prev) prev.el.classList.remove('ecs-hover');
+      if (id) w.get(id, 'Dom').el.classList.add('ecs-hover');
+      w.resources.hovered = id;
+    });
+
+    world.system('domRender', w => {
+      for (const id of w.query('Dom', 'Transform')) {
+        const t = w.get(id, 'Transform');
+        if (!t.dirty) continue;
+        const el = w.get(id, 'Dom').el;
+        const moved = t.x !== 0 || t.y !== 0;
+        // `translate` rather than `transform`, so dragging never fights a
+        // hover/animation rule that also writes `transform`
+        el.style.translate = moved ? `${t.x}px ${t.y}px` : '';
+        el.classList.toggle('ecs-moved', moved);
+        t.dirty = false;
+      }
+    });
+
+    world.system('cursorRender', w => {
+      const { cursor, drag } = w.resources;
+      cursorEl.style.transform = `translate3d(${cursor.x}px, ${cursor.y}px, 0)`;
+      cursorEl.classList.toggle('grabbing', !!drag.entity);
+    });
+
+    world.system('motion', (w, dt) => {
+      if (w.resources.reduceMotion) return;
+      for (const id of w.query('Position', 'Velocity')) {
+        const p = w.get(id, 'Position'), v = w.get(id, 'Velocity');
+        p.x += v.vx * dt;
+        p.y += v.vy * dt;
+      }
+      for (const id of w.query('Spin')) {
+        const s = w.get(id, 'Spin');
+        s.angle += s.speed * dt;
+      }
+      for (const id of w.query('Star')) {
+        w.get(id, 'Star').phase += dt * 2;
+      }
+    });
+
+    world.system('recycle', w => {
+      if (w.resources.reduceMotion) return;
+      const c = w.resources.canvas;
+
+      for (const id of w.query('Star', 'Position')) {
+        const p = w.get(id, 'Position');
+        if (p.y > c.h) { p.y = -2; p.x = rand(0, c.w); }
+      }
+
+      const spent = [];
+      for (const id of w.query('Asteroid', 'Position')) {
+        const p = w.get(id, 'Position'), a = w.get(id, 'Asteroid');
+        if (p.y - a.size > c.h || p.x < -20 || p.x > c.w + 20) spent.push(id);
+      }
+      spent.forEach(id => { w.destroy(id); spawnAsteroid(true); });
+    });
+
+    world.system('lifetime', (w, dt) => {
+      const spent = [];
+      for (const id of w.query('Life')) {
+        const l = w.get(id, 'Life');
+        l.t -= dt * l.rate;
+        if (l.t <= 0) spent.push(id);
+      }
+      spent.forEach(id => w.destroy(id));
+    });
+
+    world.system('ship', (w, dt) => {
+      if (w.resources.reduceMotion) return;
+      const c = w.resources.canvas, ship = w.resources.ship;
+
+      if (!ship.entity) {
+        ship.timer -= dt;
+        if (ship.timer <= 0) spawnShip();
         return;
       }
 
-      let last = performance.now();
-      function frame(now) {
-        const dt = Math.min(0.05, (now - last) / 1000);
-        last = now;
+      const p = w.get(ship.entity, 'Position');
+      spawnTrail(p.x, p.y);
+      if (p.x < -30 || p.x > c.w + 30) {
+        w.destroy(ship.entity);
+        ship.entity = 0;
+        ship.timer = rand(6, 14);
+      }
+    });
 
-        ctx.fillStyle = bgColor;
-        ctx.fillRect(0, 0, W, H);
+    world.system('canvasRender', w => {
+      const c = w.resources.canvas, ctx = c.ctx;
+      ctx.fillStyle = c.bg;
+      ctx.fillRect(0, 0, c.w, c.h);
 
-        drawStars(true, dt);
+      for (const id of w.query('Position', 'Sprite')) {
+        const p = w.get(id, 'Position');
+        const sprite = w.get(id, 'Sprite');
+        const star = w.get(id, 'Star');
+        const life = w.get(id, 'Life');
+        const spin = w.get(id, 'Spin');
 
-        ctx.fillStyle = '#4a5570';
-        asteroids.forEach((a, i) => {
-          a.x += a.vx * dt;
-          a.y += a.vy * dt;
-          a.rot += a.rotSpeed * dt;
-          if (a.y - a.size > H || a.x < -20 || a.x > W + 20) asteroids[i] = spawnAsteroid(true);
+        let alpha = sprite.alpha;
+        if (star) alpha *= 0.6 + 0.4 * Math.sin(star.phase);
+        if (life) alpha *= life.t;
+
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = sprite.color;
+
+        if (spin) {
           ctx.save();
-          ctx.translate(a.x, a.y);
-          ctx.rotate(a.rot);
-          ctx.fillRect(-a.size / 2, -a.size / 2, a.size, a.size);
+          ctx.translate(p.x, p.y);
+          ctx.rotate(spin.angle);
+          sprite.parts.forEach(part => ctx.fillRect(part.dx, part.dy, part.w, part.h));
           ctx.restore();
-        });
-
-        shipTimer -= dt;
-        if (!ship && shipTimer <= 0) spawnShip();
-        if (ship) {
-          ship.x += ship.vx * dt;
-          ship.trail.push({ x: ship.x, y: ship.y, life: 1 });
-          ship.trail.forEach(t => t.life -= dt * 1.5);
-          ship.trail = ship.trail.filter(t => t.life > 0);
-
-          ship.trail.forEach(t => {
-            ctx.fillStyle = `rgba(0, 255, 204, ${(t.life * 0.4).toFixed(2)})`;
-            ctx.fillRect(t.x - 1, t.y, 2, 1);
-          });
-
-          const dir = ship.vx > 0 ? 1 : -1;
-          ctx.fillStyle = '#00ffcc';
-          ctx.fillRect(ship.x - 4 * dir, ship.y, 8, 3);
-          ctx.fillRect(ship.x - dir, ship.y - 2, 3, 2);
-
-          if (ship.x < -30 || ship.x > W + 30) {
-            ship = null;
-            shipTimer = rand(6, 14);
-          }
+        } else {
+          sprite.parts.forEach(part => ctx.fillRect(p.x + part.dx, p.y + part.dy, part.w, part.h));
         }
-
-        requestAnimationFrame(frame);
       }
+      ctx.globalAlpha = 1;
+    });
+
+    // ── One loop drives the whole page ──────────────────────────────────
+    let last = performance.now();
+    requestAnimationFrame(function frame(now) {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      world.run(dt);
       requestAnimationFrame(frame);
-    })();
-
-    // ── The page IS the game: a gamepad/keyboard-driven reticle roams the whole
-    // site, presses real buttons & links, and can pick up + drag real DOM
-    // elements marked [data-game-entity] (the three GAME tiles). ──
-    (function () {
-      const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-      const CLICKABLE = 'a[href], button, input[type="submit"], input[type="text"], input[type="email"], textarea';
-
-      const cursorEl = document.getElementById('gp-cursor');
-      const statusEl = document.getElementById('gamepad-status');
-
-      function setGamepadStatus(connected, text) {
-        statusEl.textContent = text;
-        statusEl.classList.toggle('connected', connected);
-      }
-      setGamepadStatus(false, '🎮 Geen controller — pijltjestoetsen actief');
-
-      const cursor = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-      let hasMoved = false;
-      let hoveredEl = null;
-      let dragging = false;
-      let grabbedEl = null;
-      let grabOffsetX = 0, grabOffsetY = 0, grabBaseLeft = 0, grabBaseTop = 0;
-
-      // prep every entity so a transform-based drag never triggers layout reflow
-      document.querySelectorAll('[data-game-entity]').forEach(el => {
-        el.dataset.tx = '0';
-        el.dataset.ty = '0';
-      });
-
-      function activateAt(x, y) {
-        const el = document.elementFromPoint(x, y);
-        if (!el) return;
-        const entityEl = el.closest('[data-game-entity]');
-        if (entityEl) {
-          const rect = entityEl.getBoundingClientRect();
-          grabOffsetX = x - rect.left;
-          grabOffsetY = y - rect.top;
-          grabBaseLeft = rect.left - (parseFloat(entityEl.dataset.tx) || 0);
-          grabBaseTop = rect.top - (parseFloat(entityEl.dataset.ty) || 0);
-          grabbedEl = entityEl;
-          dragging = true;
-          entityEl.classList.add('gp-grabbed');
-          return;
-        }
-        const clickableEl = el.closest(CLICKABLE);
-        if (clickableEl) {
-          if (clickableEl.tagName === 'INPUT' || clickableEl.tagName === 'TEXTAREA') clickableEl.focus();
-          else clickableEl.click();
-        }
-      }
-
-      function releaseDrag() {
-        if (grabbedEl) grabbedEl.classList.remove('gp-grabbed');
-        dragging = false;
-        grabbedEl = null;
-      }
-
-      function updateHover() {
-        const el = hasMoved ? document.elementFromPoint(cursor.x, cursor.y) : null;
-        const next = el && (el.closest('[data-game-entity]') || el.closest(CLICKABLE));
-        if (next !== hoveredEl) {
-          if (hoveredEl) hoveredEl.classList.remove('gp-hover');
-          if (next) next.classList.add('gp-hover');
-          hoveredEl = next;
-        }
-      }
-
-      function moveCursorTo(nx, ny) {
-        cursor.x = clamp(nx, 0, window.innerWidth - 1);
-        cursor.y = clamp(ny, 0, window.innerHeight - 1);
-        if (!hasMoved) {
-          hasMoved = true;
-          cursorEl.classList.add('active');
-        }
-        if (dragging && grabbedEl) {
-          const newTX = (cursor.x - grabOffsetX) - grabBaseLeft;
-          const newTY = (cursor.y - grabOffsetY) - grabBaseTop;
-          // `translate` (not `transform`) so dragging never fights any other
-          // code that also animates `transform` on the entity
-          grabbedEl.style.translate = `${newTX}px ${newTY}px`;
-          grabbedEl.dataset.tx = newTX;
-          grabbedEl.dataset.ty = newTY;
-        } else if (!dragging) {
-          // edge auto-scroll only makes sense while free-roaming, not mid-drag.
-          // speed ramps with how deep the cursor is into the edge zone (0 at the
-          // zone's inner boundary, MAX_SPEED right at the true screen edge) so
-          // it's controllable instead of jumping straight to full speed and
-          // overshooting short sections.
-          const EDGE = 70, MAX_SPEED = 28;
-          if (cursor.y < EDGE) {
-            window.scrollBy(0, -MAX_SPEED * ((EDGE - cursor.y) / EDGE));
-          } else if (cursor.y > window.innerHeight - EDGE) {
-            window.scrollBy(0, MAX_SPEED * ((cursor.y - (window.innerHeight - EDGE)) / EDGE));
-          }
-        }
-      }
-
-      // ── Keyboard fallback ──
-      const keysHeld = new Set();
-      const CONTROL_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Enter'];
-      const isActivateKey = key => key === ' ' || key === 'Enter';
-      window.addEventListener('keydown', e => {
-        if (CONTROL_KEYS.includes(e.key)) e.preventDefault();
-        keysHeld.add(e.key);
-        if (isActivateKey(e.key) && !e.repeat && !dragging) activateAt(cursor.x, cursor.y);
-      });
-      window.addEventListener('keyup', e => {
-        keysHeld.delete(e.key);
-        if (isActivateKey(e.key) && dragging) releaseDrag();
-      });
-
-      // ── Gamepad ──
-      let gpPrevActivate = false;
-      window.addEventListener('gamepadconnected', e => {
-        setGamepadStatus(true, `🎮 ${e.gamepad.id.slice(0, 40)} verbonden`);
-      });
-      window.addEventListener('gamepaddisconnected', () => {
-        setGamepadStatus(false, '🎮 Geen controller — pijltjestoetsen actief');
-      });
-
-      const KEY_SPEED = 9;
-      const GP_MAX_SPEED = 16;
-      const GP_DEAD = 0.15;
-
-      function frame() {
-        let dx = 0, dy = 0;
-        if (keysHeld.has('ArrowLeft')) dx -= KEY_SPEED;
-        if (keysHeld.has('ArrowRight')) dx += KEY_SPEED;
-        if (keysHeld.has('ArrowUp')) dy -= KEY_SPEED;
-        if (keysHeld.has('ArrowDown')) dy += KEY_SPEED;
-
-        const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-        const gp = pads && Array.from(pads).find(p => p);
-        if (gp) {
-          const ax = gp.axes[0] || 0, ay = gp.axes[1] || 0;
-          if (Math.abs(ax) > GP_DEAD) dx += ax * GP_MAX_SPEED;
-          if (Math.abs(ay) > GP_DEAD) dy += ay * GP_MAX_SPEED;
-          if (gp.buttons[14] && gp.buttons[14].pressed) dx -= GP_MAX_SPEED;
-          if (gp.buttons[15] && gp.buttons[15].pressed) dx += GP_MAX_SPEED;
-          if (gp.buttons[12] && gp.buttons[12].pressed) dy -= GP_MAX_SPEED;
-          if (gp.buttons[13] && gp.buttons[13].pressed) dy += GP_MAX_SPEED;
-
-          const activateHeld = !!(gp.buttons[0] && gp.buttons[0].pressed);
-          if (activateHeld && !gpPrevActivate) activateAt(cursor.x, cursor.y);
-          if (!activateHeld && gpPrevActivate && dragging) releaseDrag();
-          gpPrevActivate = activateHeld;
-        }
-
-        if (dx !== 0 || dy !== 0) moveCursorTo(cursor.x + dx, cursor.y + dy);
-        cursorEl.style.transform = `translate3d(${cursor.x}px, ${cursor.y}px, 0)`;
-        cursorEl.classList.toggle('grabbing', dragging);
-        updateHover();
-
-        requestAnimationFrame(frame);
-      }
-      requestAnimationFrame(frame);
-
-      window.addEventListener('resize', () => {
-        cursor.x = clamp(cursor.x, 0, window.innerWidth - 1);
-        cursor.y = clamp(cursor.y, 0, window.innerHeight - 1);
-      });
-    })();
+    });
   </script>
 </body>
 
