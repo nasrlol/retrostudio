@@ -8,16 +8,42 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&display=swap');
 
+    /* Solarized Light. Base tones are the canonical base3/base2/base01/base00;
+       accents are canonical yellow/blue/magenta. --ink (base03) carries every
+       heading and every label sitting on an accent fill — the accents alone are
+       only ~4:1 on base3, so they fill shapes and set large display type, while
+       small text stays on the base tones. */
     :root {
-      --bg: #1c1c28;
-      --bg2: #242432;
-      --surface: #2b2b3c;
-      --border: #44445c;
-      --accent: #e8ff00;
-      --accent2: #00ffcc;
-      --accent3: #ff5577;
-      --text: #d0d0e8;
-      --muted: #6060a0;
+      --bg: #fdf6e3;
+      /* base3  */
+      --bg2: #f7f1de;
+      --surface: #eee8d5;
+      /* base2  */
+      --border: #ded8c4;
+      --border-hi: #93a1a1;
+      /* base1  */
+      --accent: #a8390c;
+      /* Solarized orange, darkened. Canonical #cb4b16 measures 3.8:1 on base2
+         and 4.3:1 on base3 — under AA for the 10-13px display type it carries
+         (prices, buttons, eyebrow). This clears 5:1 on both. */
+      --accent-soft: #b58900;
+      /* yellow — fills and rules only, never small text */
+      --accent2: #268bd2;
+      /* blue — outlines, focus rings and borders; never small text */
+      --accent3: #b02a68;
+      /* Solarized magenta, darkened for the same reason as orange */
+      --text: #073642;
+      /* base02 — Solarized's own body tone (base00) measures 3.6:1 on base2,
+         under AA, so body copy sits one step darker at ~10:1 */
+      --muted: #50666d;
+      /* base01, a shade darker so meta labels clear AA on base2 too */
+      --ink: #002b36;
+      /* base03 */
+
+      /* rgb triplets for shadows/overlays that need alpha */
+      --accent-rgb: 168, 57, 12;
+      --accent2-rgb: 38, 139, 210;
+      --ink-rgb: 0, 43, 54;
     }
 
     *,
@@ -49,8 +75,8 @@
       background: repeating-linear-gradient(to bottom,
           transparent 0px,
           transparent 3px,
-          rgba(0, 0, 0, 0.08) 3px,
-          rgba(0, 0, 0, 0.08) 4px);
+          rgba(var(--ink-rgb), 0.045) 3px,
+          rgba(var(--ink-rgb), 0.045) 4px);
       pointer-events: none;
       z-index: 1000;
     }
@@ -63,7 +89,8 @@
       background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
       pointer-events: none;
       z-index: 999;
-      opacity: 0.4;
+      /* reads as paper grain on the cream base rather than CRT noise */
+      opacity: 0.22;
     }
 
     /* ── SPACE GAME BACKGROUND ── */
@@ -91,7 +118,7 @@
       align-items: center;
       justify-content: space-between;
       padding: 16px 40px;
-      background: rgba(10, 10, 15, 0.88);
+      background: rgba(253, 246, 227, 0.92);
       border-bottom: 1px solid var(--border);
       backdrop-filter: blur(8px);
     }
@@ -99,8 +126,7 @@
     .nav-logo {
       font-family: 'Press Start 2P', monospace;
       font-size: 11px;
-      color: var(--accent);
-      text-shadow: 0 0 12px rgba(232, 255, 0, 0.5);
+      color: var(--ink);
       letter-spacing: 0.05em;
       text-decoration: none;
     }
@@ -111,16 +137,18 @@
       list-style: none;
     }
 
-    .nav-links a {
+    /* :not(.btn-primary) — the Patreon link in the nav is a filled button, and
+       an unscoped `.nav-links a` outranks .btn-primary's own color/size */
+    .nav-links a:not(.btn-primary) {
       font-size: 12px;
-      color: var(--muted);
+      color: var(--text);
       text-decoration: none;
       text-transform: uppercase;
       letter-spacing: 0.1em;
       transition: color 0.2s;
     }
 
-    .nav-links a:hover {
+    .nav-links a:not(.btn-primary):hover {
       color: var(--accent);
     }
 
@@ -128,7 +156,7 @@
       font-family: 'Press Start 2P', monospace;
       font-size: 9px;
       color: var(--bg);
-      background: var(--accent);
+      background: var(--ink);
       padding: 10px 16px;
       text-decoration: none;
       clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
@@ -136,8 +164,8 @@
     }
 
     .nav-cta:hover {
-      background: var(--accent2);
-      box-shadow: 0 0 16px rgba(0, 255, 204, 0.4);
+      background: var(--accent);
+      box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.35);
     }
 
     /* ── HERO ── */
@@ -158,15 +186,15 @@
       /* decoration only — must not intercept the reticle's hit-testing */
       pointer-events: none;
       background-image:
-        linear-gradient(rgba(232, 255, 0, 0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(232, 255, 0, 0.04) 1px, transparent 1px);
+        linear-gradient(rgba(var(--ink-rgb), 0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--ink-rgb), 0.07) 1px, transparent 1px);
       background-size: 40px 40px;
       mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black 30%, transparent 100%);
     }
 
     .hero-eyebrow {
       font-size: 11px;
-      color: var(--accent2);
+      color: var(--accent);
       letter-spacing: 0.3em;
       text-transform: uppercase;
       margin-bottom: 24px;
@@ -181,14 +209,13 @@
       font-family: 'Press Start 2P', monospace;
       font-size: clamp(20px, 4vw, 42px);
       line-height: 1.6;
-      color: #fff;
+      color: var(--ink);
       max-width: 800px;
       margin-bottom: 8px;
     }
 
     h1 span.accent {
       color: var(--accent);
-      text-shadow: 0 0 20px rgba(232, 255, 0, 0.6);
     }
 
     h1 span.accent2 {
@@ -198,7 +225,7 @@
     .hero-sub {
       font-family: 'VT323', monospace;
       font-size: 22px;
-      color: var(--muted);
+      color: var(--text);
       max-width: 520px;
       margin: 24px auto 48px;
     }
@@ -216,6 +243,7 @@
       color: var(--bg);
       background: var(--accent);
       padding: 16px 24px;
+      /* cream on Solarized orange — 4.3:1, the reason accent is orange */
       text-decoration: none;
       display: inline-block;
       clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
@@ -224,15 +252,15 @@
     }
 
     .btn-primary:hover {
-      background: #fff;
-      box-shadow: 0 0 32px rgba(232, 255, 0, 0.5);
+      background: var(--ink);
+      box-shadow: 0 6px 20px rgba(var(--ink-rgb), 0.28);
       transform: translateY(-2px);
     }
 
     .btn-secondary {
       font-family: 'Press Start 2P', monospace;
       font-size: 10px;
-      color: var(--accent2);
+      color: var(--ink);
       background: transparent;
       border: 1px solid var(--accent2);
       padding: 16px 24px;
@@ -244,8 +272,8 @@
     }
 
     .btn-secondary:hover {
-      background: rgba(0, 255, 204, 0.08);
-      box-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
+      background: rgba(var(--accent2-rgb), 0.12);
+      box-shadow: 0 4px 14px rgba(var(--accent2-rgb), 0.25);
       transform: translateY(-2px);
     }
 
@@ -302,7 +330,7 @@
     }
 
     .manifesto-block {
-      border-left: 3px solid var(--accent);
+      border-left: 3px solid var(--accent-soft);
       padding: 24px 32px;
       background: var(--surface);
       margin-bottom: 24px;
@@ -344,7 +372,7 @@
     .section-title {
       font-family: 'Press Start 2P', monospace;
       font-size: clamp(14px, 2vw, 22px);
-      color: #fff;
+      color: var(--ink);
       margin-bottom: 48px;
       line-height: 1.6;
     }
@@ -369,6 +397,8 @@
     .game-card:hover {
       transform: scale(1.01);
       z-index: 2;
+      background: var(--bg2);
+      box-shadow: 0 0 0 1px var(--border-hi);
     }
 
     .game-pixel-art {
@@ -394,13 +424,13 @@
     .game-title {
       font-family: 'Press Start 2P', monospace;
       font-size: 11px;
-      color: #fff;
+      color: var(--ink);
       margin-bottom: 8px;
     }
 
     .game-desc {
       font-size: 13px;
-      color: var(--muted);
+      color: var(--text);
       margin-bottom: 16px;
     }
 
@@ -430,7 +460,8 @@
       font-size: 7px;
       padding: 4px 8px;
       background: var(--accent3);
-      color: #fff;
+      color: var(--bg);
+      letter-spacing: 0.05em;
     }
 
     /* ── GAMEPAD CURSOR DEMO ── */
@@ -443,7 +474,7 @@
 
     .gamepad-hint kbd {
       font-size: 11px;
-      color: var(--accent2);
+      color: var(--ink);
       border: 1px solid var(--border);
       background: var(--surface);
       padding: 1px 6px;
@@ -458,7 +489,7 @@
       z-index: 90;
       font-size: 11px;
       color: var(--muted);
-      background: rgba(10, 10, 15, 0.85);
+      background: rgba(253, 246, 227, 0.9);
       border: 1px solid var(--border);
       padding: 6px 12px;
       border-radius: 4px;
@@ -501,7 +532,7 @@
       content: '';
       position: absolute;
       background: var(--accent);
-      box-shadow: 0 0 6px rgba(232, 255, 0, 0.8);
+      box-shadow: 0 0 6px rgba(var(--accent-rgb), 0.85);
     }
 
     #ecs-cursor::before {
@@ -523,7 +554,7 @@
     #ecs-cursor.grabbing::before,
     #ecs-cursor.grabbing::after {
       background: var(--accent2);
-      box-shadow: 0 0 8px rgba(0, 255, 204, 0.9);
+      box-shadow: 0 0 8px rgba(var(--accent2-rgb), 0.9);
     }
 
     /* ── ECS entity states ──
@@ -540,7 +571,7 @@
       position: relative;
       z-index: 500;
       outline: 2px solid var(--accent2) !important;
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 255, 204, 0.5) !important;
+      box-shadow: 0 12px 32px rgba(var(--ink-rgb), 0.25), 0 0 20px rgba(var(--accent2-rgb), 0.35) !important;
       cursor: grabbing;
       transition: none !important;
     }
@@ -590,20 +621,20 @@
     .philosophy-left h2 {
       font-family: 'Press Start 2P', monospace;
       font-size: clamp(13px, 1.8vw, 20px);
-      color: #fff;
+      color: var(--ink);
       line-height: 1.8;
       margin-bottom: 24px;
     }
 
     .philosophy-left p {
-      color: var(--muted);
+      color: var(--text);
       font-size: 14px;
       margin-bottom: 16px;
     }
 
     .philosophy-left p.philosophy-quote {
       font-style: italic;
-      color: #4a4a7a;
+      color: var(--muted);
     }
 
     .spec-list {
@@ -632,13 +663,13 @@
     .spec-icon {
       font-family: 'Press Start 2P', monospace;
       font-size: 10px;
-      color: var(--accent2);
+      color: var(--accent);
       min-width: 24px;
       margin-top: 2px;
     }
 
     .spec-list strong {
-      color: #fff;
+      color: var(--ink);
       display: block;
       margin-bottom: 4px;
       font-size: 12px;
@@ -655,12 +686,14 @@
     #support h2 {
       font-family: 'Press Start 2P', monospace;
       font-size: clamp(14px, 2vw, 20px);
-      color: #fff;
+      color: var(--ink);
       line-height: 1.8;
       margin-bottom: 16px;
     }
 
-    #support p {
+    /* scoped to the intro paragraph: as `#support p` the id specificity beat
+       .tier-label / .tier-price and repainted every tier price muted grey */
+    #support>p {
       color: var(--muted);
       margin-bottom: 48px;
       font-family: 'VT323', monospace;
@@ -687,7 +720,7 @@
     }
 
     .tier.featured {
-      background: #13201a;
+      background: #e7eff4;
       border-top: 3px solid var(--accent2);
     }
 
@@ -748,7 +781,7 @@
     .footer-logo {
       font-family: 'Press Start 2P', monospace;
       font-size: 10px;
-      color: var(--accent);
+      color: var(--ink);
     }
 
     .footer-copy {
@@ -809,11 +842,11 @@
       max-width: 640px;
       margin: 24px auto 12px;
       display: block;
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
+      background: var(--surface);
       padding: 18px;
       border: 1px solid var(--border);
       border-radius: 6px;
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+      box-shadow: 0 6px 18px rgba(var(--ink-rgb), 0.1);
     }
 
     .contact-form .form-row {
@@ -833,9 +866,9 @@
       width: 100%;
       padding: 10px;
       margin-top: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.04);
-      background: rgba(255, 255, 255, 0.02);
-      color: var(--text);
+      border: 1px solid var(--border-hi);
+      background: var(--bg);
+      color: var(--ink);
       border-radius: 4px;
       font-family: inherit;
       font-size: 14px;
@@ -846,7 +879,7 @@
     .contact-form textarea:focus {
       outline: none;
       border-color: var(--accent2);
-      box-shadow: 0 0 10px rgba(0, 255, 204, 0.08);
+      box-shadow: 0 0 0 3px rgba(var(--accent2-rgb), 0.2);
     }
 
     .contact-form .form-actions {
@@ -951,7 +984,7 @@
     <div class="games-grid">
 
       <a href="https://git.nsrddyn.com" target="_blank" rel="noopener" class="game-card">
-        <div class="game-pixel-art" style="background:#0d1117;">
+        <div class="game-pixel-art" style="background:#002b36;">
           <canvas id="c1" width="64" height="36"></canvas>
         </div>
         <div class="game-badge">NIEUW</div>
@@ -967,7 +1000,7 @@
       </a>
 
       <a href="https://git.nsrddyn.com" target="_blank" rel="noopener" class="game-card">
-        <div class="game-pixel-art" style="background:#080d12;">
+        <div class="game-pixel-art" style="background:#00212b;">
           <canvas id="c2" width="64" height="36"></canvas>
         </div>
         <div class="game-info">
@@ -981,7 +1014,7 @@
       </a>
 
       <a href="https://git.nsrddyn.com" target="_blank" rel="noopener" class="game-card">
-        <div class="game-pixel-art" style="background:#0a1208;">
+        <div class="game-pixel-art" style="background:#00262b;">
           <canvas id="c3" width="64" height="36"></canvas>
         </div>
         <div class="game-info">
@@ -989,7 +1022,7 @@
           <p class="game-desc">Sokoban-variant met een twist. 40 handgemaakte levels. Werkt in de browser.</p>
           <div class="game-meta">
             <span class="game-price">€4.99</span>
-            <span class="game-platform">WIN / WEB</span>
+            <span class="game-platform">WIN</span>
           </div>
         </div>
       </a>
@@ -1037,13 +1070,6 @@
               Publieke issue-tracker. Iedereen ziet wat er wordt gebouwd en wanneer.
             </div>
           </li>
-          <li>
-            <span class="spec-icon">▸</span>
-            <div>
-              <strong>Solo developer</strong>
-              Één persoon. Geen publisher. Geen investor. Rechte lijn van idee naar spel.
-            </div>
-          </li>
         </ul>
       </div>
     </div>
@@ -1056,23 +1082,29 @@
     <p>Vroege toegang, dev-assets, en directe lijn naar de roadmap. Geen bullshit.</p>
     <div class="tiers">
       <div class="tier">
-        <p class="tier-label">Basis</p>
-        <p class="tier-price">€3 <span>/ maand</span></p>
+        <p class="tier-label">Standard</p>
+        <p class="tier-price">€4,99 <span>/ maand</span></p>
         <ul class="tier-features">
-          <li>Vroege toegang tot alle releases</li>
-          <li>Maandelijkse devlog nieuwsbrief</li>
-          <li>Naam in credits</li>
+          <li>Toegang tot basis DLC-pakketten</li>
+          <li>2-3 nieuwe levels per maand</li>
         </ul>
       </div>
       <div class="tier featured">
-        <p class="tier-label">Creator ★</p>
-        <p class="tier-price">€8 <span>/ maand</span></p>
+        <p class="tier-label">Premium ★</p>
+        <p class="tier-price">€9,99 <span>/ maand</span></p>
         <ul class="tier-features">
-          <li>Alles van Basis</li>
-          <li>Volledige dev-asset pack</li>
-          <li>Publieke issue-tracker toegang</li>
-          <li>Discord developer kanaal</li>
-          <li>Vroege betas + builds</li>
+          <li>Alle DLC-pakketten</li>
+          <li>Early access features</li>
+          <li>Beta-toegang</li>
+        </ul>
+      </div>
+      <div class="tier">
+        <p class="tier-label">Creator</p>
+        <p class="tier-price">€19,99 <span>/ maand</span></p>
+        <ul class="tier-features">
+          <li>Volledige content</li>
+          <li>Dev-tools en assets</li>
+          <li>Modding support</li>
         </ul>
       </div>
     </div>
@@ -1127,7 +1159,7 @@
 
     // Dungeon scene
     drawPixelScene('c1',
-      { bg: '#0d1117', wall: '#2a2a4a', floor: '#1a1a2e', hero: '#e8ff00', enemy: '#ff5577', torch: '#ffaa00', stone: '#1f1f35' },
+      { bg: '#002b36', wall: '#586e75', floor: '#073642', hero: '#b58900', enemy: '#dc322f', torch: '#cb4b16', stone: '#0d4553' },
       [
         // floor tiles
         ...Array.from({ length: 64 }, (_, i) => ({ x: i, y: 20, w: 1, h: 16, color: 'floor' })),
@@ -1147,13 +1179,13 @@
         { x: 6, y: 10, w: 2, h: 4, color: 'torch' },
         { x: 56, y: 10, w: 2, h: 4, color: 'torch' },
         // torch glow
-        { x: 4, y: 8, w: 6, h: 2, color: '#ff880044' },
+        { x: 4, y: 8, w: 6, h: 2, color: '#cb4b1655' },
       ]
     );
 
     // Void runner scene
     drawPixelScene('c2',
-      { bg: '#080d12', star: '#ffffff', planet: '#334466', ship: '#00ffcc', trail: '#005544', asteroid: '#445566' },
+      { bg: '#00212b', star: '#fdf6e3', planet: '#268bd2', ship: '#2aa198', trail: '#0d5f5c', asteroid: '#586e75' },
       [
         { x: 0, y: 0, w: 64, h: 36, color: 'bg' },
         // stars
@@ -1169,7 +1201,7 @@
         { x: 14, y: 13, w: 4, h: 2, color: 'ship' },
         // trail
         { x: 4, y: 16, w: 8, h: 2, color: 'trail' },
-        { x: 2, y: 17, w: 4, h: 1, color: '#003322' },
+        { x: 2, y: 17, w: 4, h: 1, color: '#073e3d' },
         // asteroid
         { x: 32, y: 10, w: 5, h: 5, color: 'asteroid' },
         { x: 55, y: 22, w: 4, h: 4, color: 'asteroid' },
@@ -1178,7 +1210,7 @@
 
     // Grid puzzle scene
     drawPixelScene('c3',
-      { bg: '#0a1208', grid: '#1a2818', wall: '#2a4228', box: '#8b6914', goal: '#00cc66', player: '#e8ff00', solved: '#00ffcc' },
+      { bg: '#00262b', grid: '#0a3b3a', wall: '#1d5450', box: '#b58900', goal: '#859900', player: '#cb4b16', solved: '#2aa198' },
       [
         { x: 0, y: 0, w: 64, h: 36, color: 'bg' },
         // grid lines
@@ -1274,7 +1306,7 @@
       statusEl.textContent = text;
       statusEl.classList.toggle('connected', connected);
     }
-    setGamepadStatus(false, '🎮 Geen controller — pijltjestoetsen actief');
+    setGamepadStatus(false, '🎮 Tip! gebruik pijltjestoetsen en spatie om onderdelen te verplaatsen.');
 
     // ── DOM entities ────────────────────────────────────────────────────
     // This list is the single place that decides what "every element" means.
@@ -1320,14 +1352,16 @@
       ctx: spaceCanvas.getContext('2d'),
       w: 0,
       h: 0,
-      bg: getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#1c1c28',
+      bg: getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#fdf6e3',
     };
     res.ship = { entity: 0, timer: rand(3, 7) };
 
+    // On the light base the starfield inverts: dark specks on cream, drifting
+    // like dust on paper. Alphas stay low so it never competes with the copy.
     const STAR_LAYERS = [
-      { count: 70, speed: 5, size: 1, alpha: 0.30 },
-      { count: 45, speed: 12, size: 1, alpha: 0.50 },
-      { count: 22, speed: 24, size: 2, alpha: 0.75 },
+      { count: 70, speed: 5, size: 1, alpha: 0.18 },
+      { count: 45, speed: 12, size: 1, alpha: 0.30 },
+      { count: 22, speed: 24, size: 2, alpha: 0.45 },
     ];
 
     function spawnStar(layer) {
@@ -1335,7 +1369,7 @@
       world.add(id, 'Position', { x: rand(0, res.canvas.w), y: rand(0, res.canvas.h) });
       world.add(id, 'Velocity', { vx: 0, vy: layer.speed });
       world.add(id, 'Sprite', {
-        color: '#ffffff', alpha: layer.alpha,
+        color: '#586e75', alpha: layer.alpha,
         parts: [{ dx: 0, dy: 0, w: layer.size, h: layer.size }],
       });
       world.add(id, 'Star', { phase: rand(0, Math.PI * 2) });
@@ -1348,7 +1382,7 @@
       world.add(id, 'Velocity', { vx: rand(-6, 6), vy: rand(6, 16) });
       world.add(id, 'Spin', { angle: rand(0, Math.PI * 2), speed: rand(-0.3, 0.3) });
       world.add(id, 'Sprite', {
-        color: '#4a5570', alpha: 1,
+        color: '#93a1a1', alpha: 1,
         parts: [{ dx: -size / 2, dy: -size / 2, w: size, h: size }],
       });
       world.add(id, 'Asteroid', { size });
@@ -1363,7 +1397,7 @@
       });
       world.add(id, 'Velocity', { vx: dir * rand(60, 110), vy: 0 });
       world.add(id, 'Sprite', {
-        color: '#00ffcc', alpha: 1,
+        color: '#268bd2', alpha: 1,
         parts: [{ dx: -4 * dir, dy: 0, w: 8, h: 3 }, { dx: -dir, dy: -2, w: 3, h: 2 }],
       });
       world.add(id, 'Ship', { dir });
@@ -1373,7 +1407,7 @@
     function spawnTrail(x, y) {
       const id = world.create();
       world.add(id, 'Position', { x, y });
-      world.add(id, 'Sprite', { color: '#00ffcc', alpha: 0.4, parts: [{ dx: -1, dy: 0, w: 2, h: 1 }] });
+      world.add(id, 'Sprite', { color: '#268bd2', alpha: 0.4, parts: [{ dx: -1, dy: 0, w: 2, h: 1 }] });
       world.add(id, 'Life', { t: 1, rate: 1.5 });
     }
 
